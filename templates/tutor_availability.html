@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Tutor Availability - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="sidebar p-3">
+            <h5 class="mb-4"><i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal</h5>
+            <ul class="nav nav-pills flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('tutor_dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('tutor_dashboard') }}">
+                        <i class="fas fa-users me-2"></i>My Students
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('tutor_dashboard') }}">
+                        <i class="fas fa-calendar me-2"></i>Sessions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('tutor_availability') }}">
+                        <i class="fas fa-clock me-2"></i>Availability
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <div class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Manage Availability</h2>
+                <button class="btn btn-primary" onclick="addNewSlot()">
+                    <i class="fas fa-plus me-2"></i>Add Time Slot
+                </button>
+            </div>
+            
+            <!-- Current Availability -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Current Availability Schedule</h5>
+                </div>
+                <div class="card-body">
+                    {% if availability %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for slot in availability %}
+                                    <tr>
+                                        <td>{{ days[slot.day_of_week] }}</td>
+                                        <td>{{ slot.start_time }}</td>
+                                        <td>{{ slot.end_time }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if slot.is_available else 'secondary' }}">
+                                                {{ 'Available' if slot.is_available else 'Unavailable' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editSlot({{ slot.id }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteSlot({{ slot.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No availability schedule set. Click "Add Time Slot" to get started.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Weekly Calendar View -->
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Weekly Schedule Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for day_num, day_name in enumerate(days) %}
+                        <div class="col-md-12 mb-3">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">{{ day_name }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% set day_slots = availability|selectattr('day_of_week', 'equalto', day_num)|list %}
+                                    {% if day_slots %}
+                                        {% for slot in day_slots %}
+                                        <span class="badge bg-{{ 'success' if slot.is_available else 'secondary' }} me-2 mb-2">
+                                            {{ slot.start_time }} - {{ slot.end_time }}
+                                        </span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">No availability set</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Availability Modal -->
+<div class="modal fade" id="availabilityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-clock me-2"></i>Manage Availability
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="availabilityForm">
+                    <div class="mb-3">
+                        <label for="daySelect" class="form-label">Day of Week</label>
+                        <select class="form-select" id="daySelect" required>
+                            {% for day_num, day_name in enumerate(days) %}
+                            <option value="{{ day_num }}">{{ day_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="startTime" class="form-label">Start Time</label>
+                        <input type="time" class="form-control" id="startTime" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="endTime" class="form-label">End Time</label>
+                        <input type="time" class="form-control" id="endTime" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="isAvailable" checked>
+                            <label class="form-check-label" for="isAvailable">
+                                Available for sessions
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveAvailability()">
+                    <i class="fas fa-save me-2"></i>Save Availability
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add new availability slot
+function addNewSlot() {
+    const modal = new bootstrap.Modal(document.getElementById('availabilityModal'));
+    
+    // Reset form
+    document.getElementById('availabilityForm').reset();
+    document.getElementById('isAvailable').checked = true;
+    
+    modal.show();
+}
+
+// Save availability
+function saveAvailability() {
+    const day = document.getElementById('daySelect').value;
+    const startTime = document.getElementById('startTime').value;
+    const endTime = document.getElementById('endTime').value;
+    const isAvailable = document.getElementById('isAvailable').checked;
+    
+    if (!startTime || !endTime) {
+        showNotification('Please fill in all fields', 'warning');
+        return;
+    }
+    
+    if (startTime >= endTime) {
+        showNotification('End time must be after start time', 'warning');
+        return;
+    }
+    
+    // Show loading
+    const saveBtn = event.target;
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
+    saveBtn.disabled = true;
+    
+    fetch('/api/update_availability', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            day: parseInt(day),
+            start_time: startTime,
+            end_time: endTime,
+            is_available: isAvailable
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showNotification('Availability updated successfully!', 'success');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('availabilityModal'));
+            modal.hide();
+            
+            // Reload page to show updates
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Failed to update availability', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while updating availability', 'error');
+    })
+    .finally(() => {
+        // Restore button
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+// Edit existing slot
+function editSlot(slotId) {
+    showNotification('Edit functionality will be implemented here', 'info');
+    // You can implement edit functionality here
+}
+
+// Delete slot
+function deleteSlot(slotId) {
+    if (confirm('Are you sure you want to delete this availability slot?')) {
+        showNotification('Delete functionality will be implemented here', 'info');
+        // You can implement delete functionality here
+    }
+}
+
+// Quick time slots
+function addQuickSlot(day, start, end) {
+    document.getElementById('daySelect').value = day;
+    document.getElementById('startTime').value = start;
+    document.getElementById('endTime').value = end;
+    document.getElementById('isAvailable').checked = true;
+
+    const modal = new bootstrap.Modal(document.getElementById('availabilityModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

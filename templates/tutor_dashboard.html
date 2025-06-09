@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Tutor Dashboard - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="sidebar p-3">
+            <h5 class="mb-4"><i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal</h5>
+            <ul class="nav nav-pills flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#overview" onclick="showSection('overview')">
+                        <i class="fas fa-tachometer-alt me-2"></i>Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#students" onclick="showSection('students')">
+                        <i class="fas fa-users me-2"></i>My Students
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#sessions" onclick="showSection('sessions')">
+                        <i class="fas fa-calendar me-2"></i>Sessions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('tutor_availability') }}">
+                        <i class="fas fa-clock me-2"></i>Availability
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <div class="main-content">
+            <h2 class="mb-4">Tutor Dashboard</h2>
+
+            <!-- Overview Section -->
+            <div id="overview-section">
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <h4>{{ students|length }}</h4>
+                            <p class="mb-0">Active Students</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <h4>{{ sessions|length }}</h4>
+                            <p class="mb-0">Upcoming Sessions</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <h4>4.8★</h4>
+                            <p class="mb-0">Average Rating</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Overview -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4 class="mb-3">My Students</h4>
+                        {% for student in students %}
+                        <div class="card dashboard-card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-user me-2"></i>{{ student.username }}
+                                </h6>
+                                <p class="card-text">
+                                    <small class="text-muted">{{ student.email }}</small>
+                                </p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewStudentProgress({{ student.id }})">
+                                    View Progress
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4 class="mb-3">Upcoming Sessions</h4>
+                        {% for session in sessions %}
+                        <div class="card dashboard-card session-card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-user-graduate me-2"></i>{{ session.student_name }}
+                                </h6>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>{{ session.scheduled_date }}<br>
+                                        <i class="fas fa-clock me-1"></i>{{ session.scheduled_time }}
+                                    </small>
+                                </p>
+                                <span class="badge bg-{{ 'success' if session.status == 'scheduled' else 'warning' }}">
+                                    {{ session.status.title() }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Section -->
+            <div id="students-section" style="display: none;">
+                <h4 class="mb-3">All My Students</h4>
+                <div class="row">
+                    {% for student in students %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card dashboard-card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-user me-2"></i>{{ student.username }}
+                                        </h6>
+                                        <p class="card-text">
+                                            <small class="text-muted">{{ student.email }}</small>
+                                        </p>
+                                        <p class="card-text">
+                                            <span class="badge bg-primary">Student ID: {{ student.id }}</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button class="btn btn-sm btn-primary mb-2" onclick="viewStudentProgress({{ student.id }})">
+                                            <i class="fas fa-chart-line me-1"></i>Progress
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="scheduleSession({{ student.id }})">
+                                            <i class="fas fa-calendar-plus me-1"></i>Schedule
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Sessions Section -->
+            <div id="sessions-section" style="display: none;">
+                <h4 class="mb-3">All Sessions</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                            <tr>
+                                <td>{{ session.student_name }}</td>
+                                <td>{{ session.scheduled_date }}</td>
+                                <td>{{ session.scheduled_time }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if session.status == 'scheduled' else 'warning' }}">
+                                        {{ session.status.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-line me-2"></i>Student Progress
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="progressContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading student progress...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Show different sections
+function showSection(sectionName) {
+    // Hide all sections
+    document.getElementById('overview-section').style.display = 'none';
+    document.getElementById('students-section').style.display = 'none';
+    document.getElementById('sessions-section').style.display = 'none';
+
+    // Show selected section
+    document.getElementById(sectionName + '-section').style.display = 'block';
+
+    // Update active nav link
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+// View student progress
+function viewStudentProgress(studentId) {
+    const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+    modal.show();
+
+    // Fetch student progress data
+    fetch(`/api/student_progress/${studentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('progressContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.error}
+                    </div>
+                `;
+                return;
+            }
+
+            let progressHTML = `
+                <div class="mb-4">
+                    <h6>Student: ${data.student.username}</h6>
+                    <p class="text-muted">${data.student.email}</p>
+                </div>
+                <h6>Course Progress:</h6>
+            `;
+
+            if (data.progress.length === 0) {
+                progressHTML += `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No course progress found for this student.
+                    </div>
+                `;
+            } else {
+                data.progress.forEach(course => {
+                    progressHTML += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">${course.title}</h6>
+                                <p class="card-text text-muted">${course.description}</p>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar" role="progressbar"
+                                         style="width: ${course.progress}%"
+                                         aria-valuenow="${course.progress}"
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        ${course.progress}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">Last updated: ${course.updated_at}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('progressContent').innerHTML = progressHTML;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('progressContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading student progress. Please try again.
+                </div>
+            `;
+        });
+}
+
+// Schedule session for student
+function scheduleSession(studentId) {
+    showNotification('Schedule session feature will open here', 'info');
+    // You can implement the scheduling modal here
+}
+</script>
+{% endblock %}

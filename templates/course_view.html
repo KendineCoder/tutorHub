@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.title }} - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Course Header -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">{{ course.title }}</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ course.description }}</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="fas fa-signal me-1"></i>
+                                Difficulty: {{ course.difficulty_level.title() }}
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Duration: {{ course.estimated_duration }} hours
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lessons -->
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Course Lessons</h5>
+                </div>
+                <div class="card-body">
+                    {% for lesson in lessons %}
+                    <div class="card mb-3 border-start border-primary border-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-1 text-center">
+                                    <span class="badge bg-primary rounded-circle p-2">{{ lesson.lesson_order }}</span>
+                                </div>
+                                <div class="col-md-8">
+                                    <h6 class="card-title mb-1">{{ lesson.title }}</h6>
+                                    <p class="card-text text-muted mb-0">{{ lesson.content[:100] }}...</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{ lesson.duration }} minutes
+                                    </small>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <button class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-play me-1"></i>Start Lesson
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Progress Card (for students) -->
+            {% if session.user_role == 'student' and progress %}
+            <div class="card dashboard-card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Your Progress</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar"
+                             style="width: {{ progress.progress }}%"
+                             aria-valuenow="{{ progress.progress }}"
+                             aria-valuemin="0" aria-valuemax="100">
+                            {{ progress.progress }}%
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0">Keep up the great work!</p>
+                    <button class="btn btn-success btn-sm mt-2" onclick="updateProgress({{ course.id }})">
+                        <i class="fas fa-check me-1"></i>Mark as Complete
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Course Actions -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Course Actions</h6>
+                </div>
+                <div class="card-body">
+                    {% if session.user_role == 'student' %}
+                        <button class="btn btn-primary w-100 mb-2" onclick="openScheduleModal()">
+                            <i class="fas fa-calendar me-2"></i>Schedule Session
+                        </button>
+                        <button class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-download me-2"></i>Download Materials
+                        </button>
+                    {% elif session.user_role == 'tutor' %}
+                        <button class="btn btn-success w-100 mb-2">
+                            <i class="fas fa-users me-2"></i>View Students
+                        </button>
+                        <button class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-chart-line me-2"></i>Progress Reports
+                        </button>
+                    {% elif session.user_role == 'content_manager' %}
+                        <button class="btn btn-warning w-100 mb-2">
+                            <i class="fas fa-edit me-2"></i>Edit Course
+                        </button>
+                        <button class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-plus me-2"></i>Add Lesson
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Course Stats -->
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h6 class="mb-0">Course Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="text-primary">{{ lessons|length }}</h5>
+                            <small class="text-muted">Lessons</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="text-success">15</h5>
+                            <small class="text-muted">Enrolled</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
