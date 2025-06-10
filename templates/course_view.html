@@ -96,9 +96,23 @@ endblock %} {% block content %}
                     </button>
                   </div>
                   {% else %}
-                  <button class="btn btn-outline-primary btn-sm">
-                    <i class="fas fa-play me-1"></i>Start Lesson
-                  </button>
+                  <!-- Student lesson actions -->
+                  <div class="d-flex flex-column align-items-end">
+                    <button
+                      class="btn btn-outline-primary btn-sm mb-2 start-lesson-btn"
+                      data-lesson-id="{{ lesson.id }}"
+                      data-course-id="{{ course.id }}"
+                    >
+                      <i class="fas fa-play me-1"></i>Start Lesson
+                    </button>
+                    <button
+                      class="btn btn-success btn-sm complete-lesson-btn"
+                      data-lesson-id="{{ lesson.id }}"
+                      data-course-id="{{ course.id }}"
+                    >
+                      <i class="fas fa-check me-1"></i>Mark Complete
+                    </button>
+                  </div>
                   {% endif %}
                 </div>
               </div>
@@ -134,7 +148,7 @@ endblock %} {% block content %}
     <div class="col-md-4">
       <!-- Progress Card (for students) -->
       {% if session.user_role == 'student' and progress %}
-      <div class="card dashboard-card mb-4">
+      <div class="card dashboard-card mb-4" data-course="{{ course.id }}">
         <div class="card-header">
           <h6 class="mb-0">Your Progress</h6>
         </div>
@@ -151,12 +165,14 @@ endblock %} {% block content %}
               {{ progress.progress }}%
             </div>
           </div>
-          <p class="text-muted mb-0">Keep up the great work!</p>
+          <p class="text-muted mb-0 progress-text">
+            {{ progress.progress }}% Complete
+          </p>
           <button
-            class="btn btn-success btn-sm mt-2"
-            onclick="updateProgress({{ course.id }})"
+            class="btn btn-success btn-sm mt-2 complete-course-btn"
+            data-course-id="{{ course.id }}"
           >
-            <i class="fas fa-check me-1"></i>Mark as Complete
+            <i class="fas fa-check me-1"></i>Mark Course Complete
           </button>
         </div>
       </div>
@@ -234,4 +250,142 @@ endblock %} {% block content %}
 <!-- Include lesson management functionality -->
 <script src="{{ url_for('static', filename='js/lesson-management.js') }}"></script>
 <script src="{{ url_for('static', filename='js/course-management.js') }}"></script>
+<script src="{{ url_for('static', filename='js/session-scheduler.js') }}"></script>
+<script>
+  // Add lesson completion functionality for students
+  document.addEventListener("DOMContentLoaded", function () {
+    // Handle lesson completion
+    document.querySelectorAll(".complete-lesson-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const lessonId = this.dataset.lessonId;
+        const courseId = this.dataset.courseId;
+        completeLesson(lessonId, courseId, this);
+      });
+    });
+
+    // Handle lesson start
+    document.querySelectorAll(".start-lesson-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const lessonId = this.dataset.lessonId;
+        startLesson(lessonId, this);
+      });
+    });
+
+    // Handle course completion
+    document.querySelectorAll(".complete-course-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const courseId = this.dataset.courseId;
+        completeCourse(courseId, this);
+      });
+    });
+  });
+
+  // Function to mark lesson as complete
+  function completeLesson(lessonId, courseId, button) {
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...';
+    button.disabled = true;
+
+    fetch("/student/api/progress/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify({
+        lesson_id: parseInt(lessonId),
+        completed: 1,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          button.innerHTML = '<i class="fas fa-check me-1"></i>Completed';
+          button.classList.remove("btn-success");
+          button.classList.add("btn-outline-success");
+          button.disabled = true;
+
+          showNotification("Lesson marked as complete!", "success");
+
+          // Update overall progress
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          showNotification(
+            "Failed to update progress: " + (data.error || "Unknown error"),
+            "error"
+          );
+          button.innerHTML = originalText;
+          button.disabled = false;
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("An error occurred while updating progress", "error");
+        button.innerHTML = originalText;
+        button.disabled = false;
+      });
+  }
+
+  // Function to start lesson (placeholder for future functionality)
+  function startLesson(lessonId, button) {
+    showNotification(
+      "Lesson started! You can now work through the content.",
+      "info"
+    );
+    // Future: Could track lesson start time, show lesson content modal, etc.
+  }
+
+  // Function to mark entire course as complete
+  function completeCourse(courseId, button) {
+    const originalText = button.innerHTML;
+    button.innerHTML =
+      '<i class="fas fa-spinner fa-spin me-1"></i>Completing...';
+    button.disabled = true;
+
+    fetch("/student/api/courses/" + courseId + "/complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          button.innerHTML =
+            '<i class="fas fa-check me-1"></i>Course Completed!';
+          button.classList.remove("btn-success");
+          button.classList.add("btn-outline-success");
+          button.disabled = true;
+
+          showNotification(
+            "🎉 Congratulations! Course completed successfully!",
+            "success"
+          );
+
+          setTimeout(() => {
+            location.reload();
+          }, 2000);
+        } else {
+          showNotification(
+            "Failed to complete course: " + (data.error || "Unknown error"),
+            "error"
+          );
+          button.innerHTML = originalText;
+          button.disabled = false;
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification(
+          "An error occurred while completing the course",
+          "error"
+        );
+        button.innerHTML = originalText;
+        button.disabled = false;
+      });
+  }
+</script>
 {% endblock %}

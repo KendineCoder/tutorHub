@@ -1,7 +1,7 @@
 // Learning Hub JavaScript functionality
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Initialize Bootstrap tooltips
     initializeTooltips();
 
@@ -50,9 +50,9 @@ function initializeProgressRings() {
 
 // Auto-hide alerts after 5 seconds
 function autoHideAlerts() {
-    setTimeout(function() {
+    setTimeout(function () {
         const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
+        alerts.forEach(function (alert) {
             if (bootstrap.Alert.getInstance(alert)) {
                 const bsAlert = bootstrap.Alert.getInstance(alert);
                 bsAlert.close();
@@ -76,7 +76,7 @@ function updateProgress(courseId, lessonId = null) {
     const button = event.target;
     const originalText = button.innerHTML;
     button.innerHTML = '<span class="loading-spinner"></span> Updating...';
-    button.disabled = true;    fetch('/student/api/update_progress_legacy', {
+    button.disabled = true; fetch('/student/api/update_progress_legacy', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -88,48 +88,48 @@ function updateProgress(courseId, lessonId = null) {
             progress: newProgress
         })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Animate progress bar update
-            progressElement.style.width = newProgress + '%';
-            progressElement.setAttribute('aria-valuenow', newProgress);
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Animate progress bar update
+                progressElement.style.width = newProgress + '%';
+                progressElement.setAttribute('aria-valuenow', newProgress);
 
-            // Update progress text
-            const progressText = document.querySelector(`[data-course="${courseId}"] .progress-text`);
-            if (progressText) {
-                progressText.textContent = newProgress + '% Complete';
+                // Update progress text
+                const progressText = document.querySelector(`[data-course="${courseId}"] .progress-text`);
+                if (progressText) {
+                    progressText.textContent = newProgress + '% Complete';
+                }
+
+                // Update progress ring if exists
+                const progressRing = document.querySelector(`[data-course="${courseId}"] .course-progress-ring`);
+                if (progressRing) {
+                    progressRing.style.setProperty('--progress', newProgress);
+                }
+
+                // Show success message
+                showNotification('Progress updated successfully!', 'success');
+
+                // Check if course is completed
+                if (newProgress === 100) {
+                    showNotification('🎉 Congratulations! Course completed!', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                }
+            } else {
+                showNotification('Failed to update progress', 'error');
             }
-
-            // Update progress ring if exists
-            const progressRing = document.querySelector(`[data-course="${courseId}"] .course-progress-ring`);
-            if (progressRing) {
-                progressRing.style.setProperty('--progress', newProgress);
-            }
-
-            // Show success message
-            showNotification('Progress updated successfully!', 'success');
-
-            // Check if course is completed
-            if (newProgress === 100) {
-                showNotification('🎉 Congratulations! Course completed!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            }
-        } else {
-            showNotification('Failed to update progress', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('An error occurred while updating progress', 'error');
-    })
-    .finally(() => {
-        // Restore button
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while updating progress', 'error');
+        })
+        .finally(() => {
+            // Restore button
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
 }
 
 // Show notification
@@ -349,7 +349,7 @@ function submitScheduleForm() {
 function initializeSearch() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        searchInput.addEventListener('input', function(e) {
+        searchInput.addEventListener('input', function (e) {
             const searchTerm = e.target.value.toLowerCase();
             const searchableItems = document.querySelectorAll('[data-searchable]');
 
@@ -502,7 +502,7 @@ function addMobileMenuButton() {
 }
 
 // Handle window resize
-window.addEventListener('resize', function() {
+window.addEventListener('resize', function () {
     addMobileMenuButton();
 
     // Hide sidebar on desktop
@@ -537,14 +537,14 @@ function addLoadingState(button, text = 'Loading...') {
     button.innerHTML = `<span class="loading-spinner"></span> ${text}`;
     button.disabled = true;
 
-    return function() {
+    return function () {
         button.innerHTML = originalText;
         button.disabled = false;
     };
 }
 
 // Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
     // Ctrl/Cmd + K for search
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
@@ -574,14 +574,14 @@ function trackEvent(category, action, label = '') {
 
 // Track navigation
 document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', function() {
+    link.addEventListener('click', function () {
         trackEvent('Navigation', 'Click', this.textContent.trim());
     });
 });
 
 // Track button clicks
 document.querySelectorAll('.btn').forEach(button => {
-    button.addEventListener('click', function() {
+    button.addEventListener('click', function () {
         trackEvent('Button', 'Click', this.textContent.trim());
     });
 });

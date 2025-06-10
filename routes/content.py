@@ -42,8 +42,29 @@ def course_view(course_id):
     # Get user progress if student
     progress = None
     if session['user_role'] == 'student':
-        progress = conn.execute('SELECT * FROM progress WHERE user_id = ? AND course_id = ?',
-                                (session['user_id'], course_id)).fetchone()
+        # Check if student is enrolled
+        enrollment = conn.execute('''
+            SELECT * FROM enrollments 
+            WHERE student_id = ? AND course_id = ? AND status = 'active'
+        ''', (session['user_id'], course_id)).fetchone()
+        
+        if enrollment:
+            # Calculate progress based on completed lessons
+            total_lessons = len(lessons)
+            if total_lessons > 0:
+                completed_lessons = conn.execute('''
+                    SELECT COUNT(*) as count FROM progress 
+                    WHERE user_id = ? AND lesson_id IN (
+                        SELECT id FROM lessons WHERE course_id = ?
+                    ) AND completed = 1
+                ''', (session['user_id'], course_id)).fetchone()['count']
+                
+                progress_percentage = (completed_lessons / total_lessons) * 100
+                progress = {
+                    'progress': round(progress_percentage, 1),
+                    'completed_lessons': completed_lessons,
+                    'total_lessons': total_lessons
+                }
 
     conn.close()
     return render_template('course_view.html', course=course, lessons=lessons, progress=progress)

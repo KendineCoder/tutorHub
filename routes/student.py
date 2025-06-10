@@ -216,8 +216,7 @@ def update_progress():
         
         if not lesson:
             return jsonify({'error': 'Lesson not found or not enrolled in course'}), 404
-        
-        # Check if progress already exists
+          # Check if progress already exists
         existing_progress = conn.execute('''
             SELECT id FROM progress 
             WHERE user_id = ? AND lesson_id = ?
@@ -231,11 +230,11 @@ def update_progress():
                 WHERE user_id = ? AND lesson_id = ?
             ''', (data['completed'], session['user_id'], data['lesson_id']))
         else:
-            # Create new progress entry
+            # Create new progress entry - include course_id from lesson
             conn.execute('''
-                INSERT INTO progress (user_id, lesson_id, completed, updated_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ''', (session['user_id'], data['lesson_id'], data['completed']))
+                INSERT INTO progress (user_id, course_id, lesson_id, completed, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (session['user_id'], lesson['course_id'], data['lesson_id'], data['completed']))
         
         conn.commit()
         
@@ -371,13 +370,10 @@ def find_tutors():
         
         query = '''
             SELECT DISTINCT u.id, u.username, u.email,
-                   GROUP_CONCAT(DISTINCT c.title) as subjects,
-                   AVG(sr.rating) as avg_rating,
-                   COUNT(DISTINCT sr.id) as rating_count
+                   GROUP_CONCAT(DISTINCT c.title) as subjects
             FROM users u
             LEFT JOIN sessions s ON u.id = s.tutor_id
             LEFT JOIN courses c ON s.course_id = c.id
-            LEFT JOIN session_ratings sr ON s.id = sr.session_id
             WHERE u.role = 'tutor' AND u.is_active = 1
         '''
         params = []
@@ -388,7 +384,7 @@ def find_tutors():
         
         query += '''
             GROUP BY u.id, u.username, u.email
-            ORDER BY avg_rating DESC NULLS LAST, u.username
+            ORDER BY u.username
         '''
         
         tutors = conn.execute(query, params).fetchall()

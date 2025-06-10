@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS progress (
     completed BOOLEAN DEFAULT FALSE,
     last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, course_id),
+    UNIQUE(user_id, course_id, lesson_id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
     FOREIGN KEY (lesson_id) REFERENCES lessons (id) ON DELETE SET NULL
