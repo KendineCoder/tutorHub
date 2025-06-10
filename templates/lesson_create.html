@@ -1,0 +1,377 @@
+{% extends "base.html" %} {% block title %}Create Lesson - Learning Hub{%
+endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card dashboard-card">
+        <div class="card-header bg-success text-white">
+          <h4 class="mb-0">
+            <i class="fas fa-plus-circle me-2"></i>Add New Lesson
+          </h4>
+          <p class="mb-0 mt-2">Course: <strong>{{ course.title }}</strong></p>
+        </div>
+        <div class="card-body">
+          <form id="lessonForm">
+            <input type="hidden" id="courseId" value="{{ course.id }}" />
+
+            <div class="row">
+              <div class="col-md-8">
+                <div class="mb-3">
+                  <label for="lessonTitle" class="form-label"
+                    >Lesson Title *</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="lessonTitle"
+                    name="title"
+                    required
+                    placeholder="Enter lesson title"
+                  />
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label for="lessonOrder" class="form-label"
+                    >Lesson Order *</label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="lessonOrder"
+                    name="lesson_order"
+                    value="{{ next_order }}"
+                    min="1"
+                    required
+                  />
+                  <small class="form-text text-muted"
+                    >Position in course sequence</small
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="lessonContent" class="form-label"
+                >Lesson Content *</label
+              >
+              <textarea
+                class="form-control"
+                id="lessonContent"
+                name="content"
+                rows="8"
+                required
+                placeholder="Enter the lesson content, instructions, and learning objectives"
+              ></textarea>
+              <small class="form-text text-muted"
+                >Provide detailed content including learning objectives,
+                instructions, and materials</small
+              >
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="lessonDuration" class="form-label"
+                    >Duration (minutes)</label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="lessonDuration"
+                    name="duration"
+                    value="60"
+                    min="5"
+                    max="480"
+                  />
+                  <small class="form-text text-muted"
+                    >Estimated time to complete</small
+                  >
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="lessonType" class="form-label">Lesson Type</label>
+                  <select
+                    class="form-select"
+                    id="lessonType"
+                    name="lesson_type"
+                  >
+                    <option value="lecture">Lecture</option>
+                    <option value="exercise">Exercise</option>
+                    <option value="assignment">Assignment</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="project">Project</option>
+                    <option value="discussion">Discussion</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="lessonObjectives" class="form-label"
+                >Learning Objectives</label
+              >
+              <textarea
+                class="form-control"
+                id="lessonObjectives"
+                name="objectives"
+                rows="3"
+                placeholder="List what students will learn or be able to do after completing this lesson"
+              ></textarea>
+              <small class="form-text text-muted"
+                >Optional: Define clear, measurable learning outcomes</small
+              >
+            </div>
+
+            <div class="mb-3">
+              <label for="lessonResources" class="form-label"
+                >Additional Resources</label
+              >
+              <textarea
+                class="form-control"
+                id="lessonResources"
+                name="resources"
+                rows="3"
+                placeholder="Links, readings, videos, or other materials (one per line)"
+              ></textarea>
+              <small class="form-text text-muted"
+                >Optional: External resources, links, or reading
+                materials</small
+              >
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+              <a
+                href="{{ url_for('content.course_view', course_id=course.id) }}"
+                class="btn btn-secondary"
+              >
+                <i class="fas fa-arrow-left me-1"></i>Back to Course
+              </a>
+              <div>
+                <button
+                  type="button"
+                  class="btn btn-outline-primary me-2"
+                  id="previewBtn"
+                >
+                  <i class="fas fa-eye me-1"></i>Preview
+                </button>
+                <button type="submit" class="btn btn-success" id="submitBtn">
+                  <i class="fas fa-save me-1"></i>Create Lesson
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-eye me-2"></i>Lesson Preview
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body" id="previewContent">
+        <!-- Preview content will be inserted here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          data-bs-dismiss="modal"
+          onclick="document.getElementById('submitBtn').focus()"
+        >
+          <i class="fas fa-edit me-1"></i>Continue Editing
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Form submission handler
+  document
+    .getElementById("lessonForm")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById("submitBtn");
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+      submitBtn.disabled = true;
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+      data.course_id = parseInt(document.getElementById("courseId").value);
+      data.lesson_order = parseInt(data.lesson_order);
+      data.duration = parseInt(data.duration) || 60;
+
+      try {
+        const response = await fetch("/api/lessons", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();        if (response.ok) {
+          showNotification("Lesson created successfully!", "success");
+          setTimeout(() => {
+            window.location.href = `/content/course/${data.course_id}`;
+          }, 1500);
+        } else {
+          showNotification(result.error || "Failed to create lesson", "error");
+        }
+      } catch (error) {
+        showNotification(
+          "An error occurred while creating the lesson",
+          "error"
+        );
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+  // Preview functionality
+  document.getElementById("previewBtn").addEventListener("click", function () {
+    const title = document.getElementById("lessonTitle").value;
+    const content = document.getElementById("lessonContent").value;
+    const duration = document.getElementById("lessonDuration").value;
+    const order = document.getElementById("lessonOrder").value;
+    const objectives = document.getElementById("lessonObjectives").value;
+    const resources = document.getElementById("lessonResources").value;
+
+    if (!title || !content) {
+      showNotification(
+        "Please fill in the title and content to preview",
+        "warning"
+      );
+      return;
+    }
+
+    const previewContent = document.getElementById("previewContent");
+    previewContent.innerHTML = `
+        <div class="lesson-preview">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h4 class="text-primary">${title}</h4>
+                    <small class="text-muted">Lesson ${order} • ${duration} minutes</small>
+                </div>
+                <span class="badge bg-primary rounded-circle">${order}</span>
+            </div>
+            
+            <div class="lesson-content mb-4">
+                <h6>Content:</h6>
+                <div class="p-3 bg-light rounded">
+                    ${content.replace(/\n/g, "<br>")}
+                </div>
+            </div>
+            
+            ${
+              objectives
+                ? `
+                <div class="lesson-objectives mb-4">
+                    <h6>Learning Objectives:</h6>
+                    <div class="p-3 bg-light rounded">
+                        ${objectives.replace(/\n/g, "<br>")}
+                    </div>
+                </div>
+            `
+                : ""
+            }
+            
+            ${
+              resources
+                ? `
+                <div class="lesson-resources">
+                    <h6>Additional Resources:</h6>
+                    <div class="p-3 bg-light rounded">
+                        ${resources.replace(/\n/g, "<br>")}
+                    </div>
+                </div>
+            `
+                : ""
+            }
+        </div>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById("previewModal"));
+    modal.show();
+  });
+
+  // Auto-save draft functionality (optional enhancement)
+  let autoSaveTimer;
+  function autoSaveDraft() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      const title = document.getElementById("lessonTitle").value;
+      if (title.trim()) {
+        localStorage.setItem(
+          "lesson_draft",
+          JSON.stringify({
+            title: title,
+            content: document.getElementById("lessonContent").value,
+            duration: document.getElementById("lessonDuration").value,
+            objectives: document.getElementById("lessonObjectives").value,
+            resources: document.getElementById("lessonResources").value,
+            timestamp: Date.now(),
+          })
+        );
+      }
+    }, 2000);
+  }
+
+  // Add auto-save listeners
+  [
+    "lessonTitle",
+    "lessonContent",
+    "lessonObjectives",
+    "lessonResources",
+  ].forEach((id) => {
+    document.getElementById(id).addEventListener("input", autoSaveDraft);
+  });
+
+  // Load draft on page load
+  window.addEventListener("load", function () {
+    const draft = localStorage.getItem("lesson_draft");
+    if (draft) {
+      const data = JSON.parse(draft);
+      const age = Date.now() - data.timestamp;
+
+      // Only load draft if less than 1 hour old
+      if (age < 3600000) {
+        if (
+          confirm("A draft lesson was found. Would you like to restore it?")
+        ) {
+          document.getElementById("lessonTitle").value = data.title || "";
+          document.getElementById("lessonContent").value = data.content || "";
+          document.getElementById("lessonDuration").value = data.duration || 60;
+          document.getElementById("lessonObjectives").value =
+            data.objectives || "";
+          document.getElementById("lessonResources").value =
+            data.resources || "";
+        }
+      }
+      localStorage.removeItem("lesson_draft");
+    }
+  });
+</script>
+{% endblock %}

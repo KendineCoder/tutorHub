@@ -1,0 +1,156 @@
+{% extends "base.html" %} {% block title %}Create Course - Learning Hub{%
+endblock %} {% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card dashboard-card">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">
+            <i class="fas fa-plus-circle me-2"></i>Create New Course
+          </h4>
+        </div>
+        <div class="card-body">
+          <form id="courseForm">
+            <div class="mb-3">
+              <label for="courseTitle" class="form-label">Course Title *</label>
+              <input
+                type="text"
+                class="form-control"
+                id="courseTitle"
+                name="title"
+                required
+                placeholder="Enter course title"
+              />
+            </div>
+
+            <div class="mb-3">
+              <label for="courseDescription" class="form-label"
+                >Description *</label
+              >
+              <textarea
+                class="form-control"
+                id="courseDescription"
+                name="description"
+                rows="4"
+                required
+                placeholder="Describe the course content and objectives"
+              ></textarea>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="difficultyLevel" class="form-label"
+                    >Difficulty Level *</label
+                  >
+                  <select
+                    class="form-select"
+                    id="difficultyLevel"
+                    name="difficulty_level"
+                    required
+                  >
+                    <option value="">Select difficulty</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="estimatedDuration" class="form-label"
+                    >Estimated Duration (hours) *</label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="estimatedDuration"
+                    name="estimated_duration"
+                    min="1"
+                    max="200"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Course Tags</label>
+              <input
+                type="text"
+                class="form-control"
+                id="courseTags"
+                name="tags"
+                placeholder="programming, web development, python (comma separated)"
+              />
+              <small class="form-text text-muted"
+                >Optional: Add tags to help students find your course</small
+              >
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <button
+                type="button"
+                class="btn btn-secondary me-2"
+                onclick="window.history.back()"
+              >
+                <i class="fas fa-times me-1"></i>Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" id="submitBtn">
+                <i class="fas fa-save me-1"></i>Create Course
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document
+    .getElementById("courseForm")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById("submitBtn");
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+      submitBtn.disabled = true;
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch("/api/courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showNotification("Course created successfully!", "success");
+          setTimeout(() => {
+            window.location.href = "/content";
+          }, 1500);
+        } else {
+          showNotification(result.error || "Failed to create course", "error");
+        }
+      } catch (error) {
+        showNotification(
+          "An error occurred while creating the course",
+          "error"
+        );
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+</script>
+{% endblock %}

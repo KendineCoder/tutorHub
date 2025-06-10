@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Tutor Dashboard - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="sidebar p-3">
+            <h5 class="mb-4"><i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal</h5>
+            <ul class="nav nav-pills flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#overview">
+                        <i class="fas fa-tachometer-alt me-2"></i>Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#students">
+                        <i class="fas fa-users me-2"></i>My Students
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#sessions">
+                        <i class="fas fa-calendar me-2"></i>Sessions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#availability">
+                        <i class="fas fa-clock me-2"></i>Availability
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <div class="main-content">
+            <h2 class="mb-4">Tutor Dashboard</h2>
+            
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <h4>{{ students|length }}</h4>
+                        <p class="mb-0">Active Students</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <h4>{{ sessions|length }}</h4>
+                        <p class="mb-0">Upcoming Sessions</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <h4>4.8★</h4>
+                        <p class="mb-0">Average Rating</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Content -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h4 class="mb-3">My Students</h4>
+                    {% for student in students %}
+                    <div class="card dashboard-card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-user me-2"></i>{{ student.username }}
+                            </h6>
+                            <p class="card-text">
+                                <small class="text-muted">{{ student.email }}</small>
+                            </p>
+                            <button class="btn btn-sm btn-outline-primary">View Progress</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="col-md-6">
+                    <h4 class="mb-3">Upcoming Sessions</h4>
+                    {% for session in sessions %}
+                    <div class="card dashboard-card session-card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-user-graduate me-2"></i>{{ session.student_name }}
+                            </h6>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>{{ session.scheduled_date }}<br>
+                                    <i class="fas fa-clock me-1"></i>{{ session.scheduled_time }}
+                                </small>
+                            </p>
+                            <span class="badge bg-{{ 'success' if session.status == 'scheduled' else 'warning' }}">
+                                {{ session.status.title() }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

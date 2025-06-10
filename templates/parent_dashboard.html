@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Parent Dashboard - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="sidebar p-3">
+            <h5 class="mb-4"><i class="fas fa-user-friends me-2"></i>Parent Portal</h5>
+            <ul class="nav nav-pills flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#overview">
+                        <i class="fas fa-tachometer-alt me-2"></i>Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#children">
+                        <i class="fas fa-child me-2"></i>Children
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#progress">
+                        <i class="fas fa-chart-line me-2"></i>Progress
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#sessions">
+                        <i class="fas fa-calendar me-2"></i>Sessions
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <div class="main-content">
+            <h2 class="mb-4">Parent Dashboard</h2>
+
+            <!-- Children's Progress -->
+            <div class="row">
+                <div class="col-12">
+                    <h4 class="mb-3">Children's Progress</h4>
+                    {% if children_progress %}
+                        {% for progress in children_progress %}
+                        <div class="card dashboard-card course-card mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6 class="card-title">{{ progress.username }}</h6>
+                                        <p class="card-text">{{ progress.title }}</p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar" role="progressbar"
+                                                 style="width: {{ progress.progress }}%"
+                                                 aria-valuenow="{{ progress.progress }}"
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ progress.progress }}% Complete</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No children's progress data available yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
