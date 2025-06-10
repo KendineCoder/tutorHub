@@ -5,7 +5,7 @@
 
 class UserManager {
     constructor() {
-        this.baseUrl = '/api';
+        this.baseUrl = '/admin/api';
         this.currentFilters = {
             search: '',
             role: 'all',

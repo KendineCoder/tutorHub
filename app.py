@@ -11,7 +11,6 @@ from routes.tutor import tutor_bp
 from routes.admin import admin_bp
 from routes.parent import parent_bp
 from routes.content import content_bp
-from routes.api import api_bp
 
 
 def create_app():
@@ -27,7 +26,6 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(parent_bp)
     app.register_blueprint(content_bp)
-    app.register_blueprint(api_bp)
     
     return app
 

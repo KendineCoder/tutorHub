@@ -121,9 +121,8 @@ endblock %} {% block content %}
 
       const formData = new FormData(this);
       const data = Object.fromEntries(formData.entries());
-
       try {
-        const response = await fetch("/api/courses", {
+        const response = await fetch("/content/api/courses", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

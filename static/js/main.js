@@ -76,9 +76,7 @@ function updateProgress(courseId, lessonId = null) {
     const button = event.target;
     const originalText = button.innerHTML;
     button.innerHTML = '<span class="loading-spinner"></span> Updating...';
-    button.disabled = true;
-
-    fetch('/api/update_progress', {
+    button.disabled = true;    fetch('/student/api/update_progress_legacy', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

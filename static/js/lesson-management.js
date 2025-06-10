@@ -2,7 +2,7 @@
 
 class LessonManager {
     constructor() {
-        this.baseUrl = '/api';
+        this.baseUrl = '/content/api';
         this.initializeEventListeners();
     }
 
@@ -22,7 +22,7 @@ class LessonManager {
             if (e.target.matches('.reorder-lessons-btn, .reorder-lessons-btn *')) {
                 const courseId = e.target.closest('.reorder-lessons-btn').dataset.courseId;
                 this.openReorderModal(courseId);
-            }            if (e.target.matches('.add-lesson-btn, .add-lesson-btn *')) {
+            } if (e.target.matches('.add-lesson-btn, .add-lesson-btn *')) {
                 const courseId = e.target.closest('.add-lesson-btn').dataset.courseId;
                 window.location.href = `/content/lesson/create/${courseId}`;
             }
