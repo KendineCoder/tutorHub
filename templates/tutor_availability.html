@@ -101,14 +101,21 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        {% for day_num, day_name in enumerate(days) %}
+                        {% for day_name in days %}
+                        {% set day_num = loop.index0 %}
                         <div class="col-md-12 mb-3">
                             <div class="card">
                                 <div class="card-header bg-light">
                                     <h6 class="mb-0">{{ day_name }}</h6>
                                 </div>
                                 <div class="card-body">
-                                    {% set day_slots = availability|selectattr('day_of_week', 'equalto', day_num)|list %}
+                                    {% set day_slots = [] %}
+                                    {% for slot in availability %}
+                                        {% if slot.day_of_week == day_num %}
+                                            {% set _ = day_slots.append(slot) %}
+                                        {% endif %}
+                                    {% endfor %}
+
                                     {% if day_slots %}
                                         {% for slot in day_slots %}
                                         <span class="badge bg-{{ 'success' if slot.is_available else 'secondary' }} me-2 mb-2">
@@ -144,7 +151,8 @@
                     <div class="mb-3">
                         <label for="daySelect" class="form-label">Day of Week</label>
                         <select class="form-select" id="daySelect" required>
-                            {% for day_num, day_name in enumerate(days) %}
+                            {% for day_name in days %}
+                            {% set day_num = loop.index0 %}
                             <option value="{{ day_num }}">{{ day_name }}</option>
                             {% endfor %}
                         </select>
@@ -183,11 +191,11 @@
 // Add new availability slot
 function addNewSlot() {
     const modal = new bootstrap.Modal(document.getElementById('availabilityModal'));
-    
+
     // Reset form
     document.getElementById('availabilityForm').reset();
     document.getElementById('isAvailable').checked = true;
-    
+
     modal.show();
 }
 
@@ -197,23 +205,23 @@ function saveAvailability() {
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
     const isAvailable = document.getElementById('isAvailable').checked;
-    
+
     if (!startTime || !endTime) {
         showNotification('Please fill in all fields', 'warning');
         return;
     }
-    
+
     if (startTime >= endTime) {
         showNotification('End time must be after start time', 'warning');
         return;
     }
-    
+
     // Show loading
     const saveBtn = event.target;
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
     saveBtn.disabled = true;
-    
+
     fetch('/api/update_availability', {
         method: 'POST',
         headers: {
@@ -230,11 +238,11 @@ function saveAvailability() {
     .then(data => {
         if (data.status === 'success') {
             showNotification('Availability updated successfully!', 'success');
-            
+
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('availabilityModal'));
             modal.hide();
-            
+
             // Reload page to show updates
             setTimeout(() => {
                 location.reload();

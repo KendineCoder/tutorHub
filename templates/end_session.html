@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}End Session - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card dashboard-card">
+                <div class="card-header bg-warning text-dark text-center">
+                    <h4><i class="fas fa-stop me-2"></i>End Tutoring Session</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="mb-3">Session Summary</h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <strong>Student:</strong><br>
+                            <span class="text-primary">{{ session_data.student_name }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Subject:</strong><br>
+                            <span class="text-primary">
+                                {% if session_data.course_title %}
+                                    {{ session_data.course_title }}
+                                {% else %}
+                                    General Tutoring
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Duration:</strong><br>
+                            <span class="text-muted">{{ session_data.duration or 60 }} minutes</span>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('end_session', session_id=session_data.id) }}">
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>Session Notes
+                            </label>
+                            <textarea class="form-control" id="notes" name="notes" rows="4"
+                                     placeholder="What topics were covered? Any homework assigned? Student's performance notes..."></textarea>
+                            <div class="form-text">Describe what was taught and any assignments given to the student.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="rating" class="form-label">
+                                <i class="fas fa-star me-2"></i>Student Performance Rating
+                            </label>
+                            <select class="form-select" id="rating" name="rating">
+                                <option value="">Select performance rating</option>
+                                <option value="excellent">⭐⭐⭐⭐⭐ Excellent - Understood everything perfectly</option>
+                                <option value="good">⭐⭐⭐⭐ Good - Minor clarifications needed</option>
+                                <option value="average">⭐⭐⭐ Average - Some concepts need reinforcement</option>
+                                <option value="needs_work">⭐⭐ Needs Work - Requires additional practice</option>
+                                <option value="struggling">⭐ Struggling - Consider remedial sessions</option>
+                            </select>
+                            <div class="form-text">Rate how well the student understood the material.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Quick Session Stats:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="homework_assigned">
+                                        <label class="form-check-label" for="homework_assigned">
+                                            Homework assigned
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="follow_up_needed">
+                                        <label class="form-check-label" for="follow_up_needed">
+                                            Follow-up session recommended
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="materials_provided">
+                                        <label class="form-check-label" for="materials_provided">
+                                            Study materials provided
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="goals_achieved">
+                                        <label class="form-check-label" for="goals_achieved">
+                                            Session goals achieved
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Session Complete!</strong> Thank you for providing quality tutoring. Your summary will be saved and shared with the student.
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('tutor_dashboard') }}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-warning btn-lg">
+                                <i class="fas fa-check me-2"></i>Complete Session
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-populate notes based on checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const notesTextarea = document.getElementById('notes');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateNotes();
+        });
+    });
+
+    function updateNotes() {
+        let notes = [];
+
+        if (document.getElementById('homework_assigned').checked) {
+            notes.push('✓ Homework assigned for practice');
+        }
+        if (document.getElementById('follow_up_needed').checked) {
+            notes.push('✓ Follow-up session recommended');
+        }
+        if (document.getElementById('materials_provided').checked) {
+            notes.push('✓ Study materials provided to student');
+        }
+        if (document.getElementById('goals_achieved').checked) {
+            notes.push('✓ Session learning goals successfully achieved');
+        }
+
+        if (notes.length > 0) {
+            const currentNotes = notesTextarea.value.trim();
+            const autoNotes = '\n\nSession Summary:\n' + notes.join('\n');
+
+            // Only add if not already present
+            if (!currentNotes.includes('Session Summary:')) {
+                notesTextarea.value = currentNotes + autoNotes;
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -129,7 +129,7 @@ def logout():
 def student_dashboard():
     conn = get_db_connection()
 
-    # Get enrolled courses
+    # Get enrolled courses with progress
     courses = conn.execute('''
         SELECT c.*, p.progress 
         FROM courses c 
@@ -137,11 +137,12 @@ def student_dashboard():
         WHERE p.user_id = ?
     ''', (session['user_id'],)).fetchall()
 
-    # Get recent sessions
+    # Get recent sessions with tutor names and course titles
     sessions = conn.execute('''
-        SELECT s.*, u.username as tutor_name 
+        SELECT s.*, u.username as tutor_name, c.title as course_title
         FROM sessions s 
         JOIN users u ON s.tutor_id = u.id 
+        LEFT JOIN courses c ON s.course_id = c.id
         WHERE s.student_id = ? 
         ORDER BY s.scheduled_date DESC LIMIT 5
     ''', (session['user_id'],)).fetchall()
@@ -157,22 +158,41 @@ def student_dashboard():
 def tutor_dashboard():
     conn = get_db_connection()
 
+    # Get current tutor ID
+    current_tutor_id = session['user_id']
+
     # Get assigned students
     students = conn.execute('''
         SELECT DISTINCT u.id, u.username, u.email 
         FROM users u 
         JOIN sessions s ON u.id = s.student_id 
         WHERE s.tutor_id = ?
-    ''', (session['user_id'],)).fetchall()
+    ''', (current_tutor_id,)).fetchall()
 
-    # Get upcoming sessions
-    sessions = conn.execute('''
-        SELECT s.*, u.username as student_name 
-        FROM sessions s 
-        JOIN users u ON s.student_id = u.id 
-        WHERE s.tutor_id = ? AND s.scheduled_date >= date('now')
-        ORDER BY s.scheduled_date ASC
-    ''', (session['user_id'],)).fetchall()
+    # Get sessions and manually join the data
+    raw_sessions = conn.execute('''
+        SELECT * FROM sessions WHERE tutor_id = ? 
+        ORDER BY scheduled_date ASC, scheduled_time ASC
+    ''', (current_tutor_id,)).fetchall()
+
+    # Manually get student and course info for each session
+    sessions = []
+    for session_row in raw_sessions:
+        # Get student name
+        student = conn.execute('SELECT username FROM users WHERE id = ?', (session_row['student_id'],)).fetchone()
+        student_name = student['username'] if student else f"Student ID {session_row['student_id']}"
+
+        # Get course title
+        course_title = "General Tutoring"
+        if session_row['course_id']:
+            course = conn.execute('SELECT title FROM courses WHERE id = ?', (session_row['course_id'],)).fetchone()
+            course_title = course['title'] if course else f"Course ID {session_row['course_id']}"
+
+        # Create session dict with all info
+        session_dict = dict(session_row)
+        session_dict['student_name'] = student_name
+        session_dict['course_title'] = course_title
+        sessions.append(session_dict)
 
     conn.close()
     return render_template('tutor_dashboard.html', students=students, sessions=sessions)
@@ -344,28 +364,166 @@ def student_progress(student_id):
     })
 
 
-@app.route('/api/update_availability', methods=['POST'])
+# API endpoints for session management
+@app.route('/api/join_session/<int:session_id>', methods=['POST'])
 @login_required
-@role_required('tutor')
-def update_availability():
-    data = request.get_json()
-    day = data['day']
-    start_time = data['start_time']
-    end_time = data['end_time']
-    is_available = data.get('is_available', True)
-
+def join_session(session_id):
     conn = get_db_connection()
 
-    # Insert or update availability
+    # Update session status to 'in_progress'
     conn.execute('''
-        INSERT OR REPLACE INTO tutor_availability (tutor_id, day_of_week, start_time, end_time, is_available)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (session['user_id'], day, start_time, end_time, is_available))
+        UPDATE sessions 
+        SET status = 'in_progress'
+        WHERE id = ? AND student_id = ?
+    ''', (session_id, session['user_id']))
 
     conn.commit()
     conn.close()
 
-    return jsonify({'status': 'success'})
+    flash('Successfully joined the session! Session is now in progress.', 'success')
+    return redirect(url_for('student_dashboard'))
+
+
+@app.route('/api/start_session/<int:session_id>', methods=['POST'])
+@login_required
+@role_required('tutor')
+def start_session(session_id):
+    conn = get_db_connection()
+
+    # Update session status to 'in_progress'
+    conn.execute('''
+        UPDATE sessions 
+        SET status = 'in_progress'
+        WHERE id = ? AND tutor_id = ?
+    ''', (session_id, session['user_id']))
+
+    conn.commit()
+    conn.close()
+
+    flash('Session started successfully! You are now teaching.', 'success')
+    return redirect(url_for('tutor_dashboard'))
+
+
+@app.route('/api/end_session/<int:session_id>', methods=['POST'])
+@login_required
+@role_required('tutor')
+def end_session(session_id):
+    notes = request.form.get('notes', '')
+    rating = request.form.get('rating', '')
+
+    conn = get_db_connection()
+
+    # Update session status to 'completed'
+    final_notes = f"{notes}"
+    if rating:
+        final_notes += f" | Rating: {rating}"
+
+    conn.execute('''
+        UPDATE sessions 
+        SET status = 'completed', notes = ?
+        WHERE id = ? AND tutor_id = ?
+    ''', (final_notes, session_id, session['user_id']))
+
+    conn.commit()
+    conn.close()
+
+    flash('Session completed successfully! Summary has been saved.', 'success')
+    return redirect(url_for('tutor_dashboard'))
+
+
+@app.route('/api/cancel_session/<int:session_id>', methods=['POST'])
+@login_required
+def cancel_session(session_id):
+    conn = get_db_connection()
+
+    # Update session status to 'cancelled'
+    conn.execute('''
+        UPDATE sessions 
+        SET status = 'cancelled'
+        WHERE id = ? AND (student_id = ? OR tutor_id = ?)
+    ''', (session_id, session['user_id'], session['user_id']))
+
+    conn.commit()
+    conn.close()
+
+    flash('Session has been cancelled.', 'warning')
+    if session['user_role'] == 'student':
+        return redirect(url_for('student_dashboard'))
+    else:
+        return redirect(url_for('tutor_dashboard'))
+
+
+# Session management pages
+@app.route('/session/<int:session_id>/join')
+@login_required
+@role_required('student')
+def join_session_page(session_id):
+    conn = get_db_connection()
+
+    # Get session details
+    session_data = conn.execute('''
+        SELECT s.*, u.username as tutor_name, c.title as course_title
+        FROM sessions s
+        JOIN users u ON s.tutor_id = u.id
+        LEFT JOIN courses c ON s.course_id = c.id
+        WHERE s.id = ? AND s.student_id = ?
+    ''', (session_id, session['user_id'])).fetchone()
+
+    conn.close()
+
+    if not session_data:
+        flash('Session not found or access denied.', 'error')
+        return redirect(url_for('student_dashboard'))
+
+    return render_template('join_session.html', session_data=session_data)
+
+
+@app.route('/session/<int:session_id>/start')
+@login_required
+@role_required('tutor')
+def start_session_page(session_id):
+    conn = get_db_connection()
+
+    # Get session details
+    session_data = conn.execute('''
+        SELECT s.*, u.username as student_name, c.title as course_title
+        FROM sessions s
+        JOIN users u ON s.student_id = u.id
+        LEFT JOIN courses c ON s.course_id = c.id
+        WHERE s.id = ? AND s.tutor_id = ?
+    ''', (session_id, session['user_id'])).fetchone()
+
+    conn.close()
+
+    if not session_data:
+        flash('Session not found or access denied.', 'error')
+        return redirect(url_for('tutor_dashboard'))
+
+    return render_template('start_session.html', session_data=session_data)
+
+
+@app.route('/session/<int:session_id>/end')
+@login_required
+@role_required('tutor')
+def end_session_page(session_id):
+    conn = get_db_connection()
+
+    # Get session details
+    session_data = conn.execute('''
+        SELECT s.*, u.username as student_name, c.title as course_title
+        FROM sessions s
+        JOIN users u ON s.student_id = u.id
+        LEFT JOIN courses c ON s.course_id = c.id
+        WHERE s.id = ? AND s.tutor_id = ?
+    ''', (session_id, session['user_id'])).fetchone()
+
+    conn.close()
+
+    if not session_data:
+        flash('Session not found or access denied.', 'error')
+        return redirect(url_for('tutor_dashboard'))
+
+    return render_template('end_session.html', session_data=session_data)
 
 
 if __name__ == '__main__':

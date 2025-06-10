@@ -301,5 +301,217 @@ function scheduleSession(studentId) {
     showNotification('Schedule session feature will open here', 'info');
     // You can implement the scheduling modal here
 }
+
+// Start tutor session
+function startTutorSession(sessionId) {
+    const modalHTML = `
+        <div class="modal fade" id="startSessionModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-video me-2"></i>Start Tutoring Session
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-chalkboard-teacher text-success" style="font-size: 3rem;"></i>
+                        </div>
+                        <h6>Ready to start the tutoring session?</h6>
+                        <p class="text-muted">You will join the video conference room with your student.</p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Make sure you have your teaching materials ready!
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" onclick="joinTutorSession(${sessionId})">
+                            <i class="fas fa-video me-2"></i>Start Teaching
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal
+    const existingModal = document.getElementById('startSessionModal');
+    if (existingModal) existingModal.remove();
+
+    // Add and show modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modal = new bootstrap.Modal(document.getElementById('startSessionModal'));
+    modal.show();
+}
+
+// Join tutor session
+function joinTutorSession(sessionId) {
+    showNotification('🎓 Connecting to tutoring session...', 'success');
+
+    // Update session card to "in progress" state
+    const sessionCard = document.querySelector(`[data-session-id="${sessionId}"]`);
+    if (sessionCard) {
+        // Update status badge
+        const statusBadge = sessionCard.querySelector('.session-status');
+        if (statusBadge) {
+            statusBadge.className = 'badge session-status bg-info';
+            statusBadge.textContent = 'In Progress';
+        }
+
+        // Update action buttons
+        const actionsDiv = sessionCard.querySelector('.session-actions');
+        if (actionsDiv) {
+            actionsDiv.innerHTML = `
+                <div class="d-grid gap-1">
+                    <button class="btn btn-info btn-sm" disabled>
+                        <i class="fas fa-video me-1"></i>Session in Progress
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="endTutorSession(${sessionId})">
+                        <i class="fas fa-stop me-1"></i>End Session
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // Simulate joining
+    setTimeout(() => {
+        showNotification('✅ Session started! You are now teaching your student.', 'success');
+    }, 2000);
+
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('startSessionModal'));
+    if (modal) modal.hide();
+}
+
+// End tutor session
+function endTutorSession(sessionId) {
+    const modalHTML = `
+        <div class="modal fade" id="endSessionModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-stop me-2"></i>End Session
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>Session Summary</h6>
+                        <div class="mb-3">
+                            <label for="sessionNotes" class="form-label">Session Notes (Optional)</label>
+                            <textarea class="form-control" id="sessionNotes" rows="3"
+                                     placeholder="What did you cover in this session? Any homework assigned?"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="studentRating" class="form-label">Student Performance</label>
+                            <select class="form-select" id="studentRating">
+                                <option value="">Select rating</option>
+                                <option value="excellent">Excellent - Understood everything</option>
+                                <option value="good">Good - Minor clarifications needed</option>
+                                <option value="average">Average - Some concepts unclear</option>
+                                <option value="needs_work">Needs Work - Requires more practice</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" onclick="finishTutorSession(${sessionId})">
+                            <i class="fas fa-check me-2"></i>End Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal
+    const existingModal = document.getElementById('endSessionModal');
+    if (existingModal) existingModal.remove();
+
+    // Add and show modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modal = new bootstrap.Modal(document.getElementById('endSessionModal'));
+    modal.show();
+}
+
+// Finish tutor session
+function finishTutorSession(sessionId) {
+    const notes = document.getElementById('sessionNotes').value;
+    const rating = document.getElementById('studentRating').value;
+
+    showNotification('📝 Saving session summary...', 'info');
+
+    // Find and remove the session card
+    const sessionCard = document.querySelector(`[data-session-id="${sessionId}"]`);
+    if (sessionCard) {
+        // Add completion animation
+        sessionCard.style.transition = 'all 0.5s ease-out';
+        sessionCard.style.opacity = '0';
+        sessionCard.style.transform = 'scale(0.9)';
+
+        // Remove the card after animation
+        setTimeout(() => {
+            sessionCard.remove();
+
+            // Check if no more sessions left
+            const remainingSessions = document.querySelectorAll('.session-card');
+            if (remainingSessions.length === 0) {
+                // Add "no sessions" message
+                const container = document.querySelector('.col-md-6');
+                if (container) {
+                    container.innerHTML += `
+                        <div class="alert alert-success fade-in">
+                            <i class="fas fa-check-circle me-2"></i>
+                            All sessions completed! Great work today.
+                        </div>
+                    `;
+                }
+            }
+        }, 500);
+    }
+
+    setTimeout(() => {
+        showNotification('✅ Session completed successfully! Summary saved.', 'success');
+    }, 1500);
+
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('endSessionModal'));
+    if (modal) modal.hide();
+}
+
+// Listen for student session updates (simulated)
+function checkForStudentSessionUpdates() {
+    // In a real app, this would be done via WebSocket or polling
+    // For demo purposes, we'll simulate receiving updates
+
+    // This function would be called when student joins a session
+    // to update the tutor's view in real-time
+}
+
+// Auto-update session status when student joins (simulation)
+function simulateStudentJoined(sessionId) {
+    const sessionCard = document.querySelector(`[data-session-id="${sessionId}"]`);
+    if (sessionCard) {
+        // Update status to show student has joined
+        const statusBadge = sessionCard.querySelector('.session-status');
+        if (statusBadge && statusBadge.textContent.trim() === 'Scheduled') {
+            statusBadge.className = 'badge session-status bg-warning';
+            statusBadge.textContent = 'Student Joined';
+
+            // Update start button to be more prominent
+            const startButton = sessionCard.querySelector('[onclick*="startTutorSession"]');
+            if (startButton) {
+                startButton.classList.add('btn-pulse');
+                startButton.innerHTML = '<i class="fas fa-video me-1"></i>Student Waiting - Join Now!';
+            }
+
+            // Show notification
+            showNotification('🔔 Student has joined the session! Click "Join Now" to start teaching.', 'warning');
+        }
+    }
+}
 </script>
 {% endblock %}

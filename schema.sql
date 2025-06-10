@@ -64,9 +64,10 @@ CREATE TABLE IF NOT EXISTS sessions (
     scheduled_date DATE NOT NULL,
     scheduled_time TIME NOT NULL,
     duration INTEGER DEFAULT 60, -- in minutes
-    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'rescheduled')),
+    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled', 'rescheduled')),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (tutor_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE SET NULL
@@ -163,12 +164,14 @@ INSERT OR IGNORE INTO progress (user_id, course_id, progress, completed) VALUES
 (6, 3, 85, FALSE),  -- sarah_student 85% through English
 (6, 5, 20, FALSE);  -- sarah_student 20% through Web Dev
 
--- Insert sample sessions
+-- Insert sample sessions (updated with correct tutor IDs)
 INSERT OR IGNORE INTO sessions (student_id, tutor_id, course_id, scheduled_date, scheduled_time, status) VALUES
 (2, 3, 1, '2025-06-10', '14:00', 'scheduled'),  -- john with jane for Python
-(2, 7, 4, '2025-06-12', '15:30', 'scheduled'),  -- john with mike for Physics
+(2, 3, 4, '2025-06-12', '15:30', 'scheduled'),  -- john with jane for Physics
 (6, 3, 3, '2025-06-11', '10:00', 'scheduled'),  -- sarah with jane for English
-(6, 7, 5, '2025-06-13', '16:00', 'scheduled');  -- sarah with mike for Web Dev
+(6, 7, 5, '2025-06-13', '16:00', 'scheduled'),  -- sarah with mike for Web Dev
+(2, 7, 1, '2025-06-14', '09:00', 'scheduled'),  -- john with mike for Python
+(6, 3, 2, '2025-06-15', '11:00', 'scheduled');  -- sarah with jane for Math
 
 -- Insert tutor availability
 INSERT OR IGNORE INTO tutor_availability (tutor_id, day_of_week, start_time, end_time) VALUES
