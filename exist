@@ -1,0 +1,161 @@
+[33mcommit a3306a077661bbc415eb833364ed228ab10edd94[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: Yiğit Kayalı <kayaliyigit00@gmail.com>
+Date:   Tue Jun 10 22:02:28 2025 +0300
+
+    Student CRUD completed
+
+[1mdiff --git a/routes/content.py b/routes/content.py[m
+[1mindex a9cb124..7674647 100644[m
+[1m--- a/routes/content.py[m
+[1m+++ b/routes/content.py[m
+[36m@@ -42,8 +42,29 @@[m [mdef course_view(course_id):[m
+     # Get user progress if student[m
+     progress = None[m
+     if session['user_role'] == 'student':[m
+[31m-        progress = conn.execute('SELECT * FROM progress WHERE user_id = ? AND course_id = ?',[m
+[31m-                                (session['user_id'], course_id)).fetchone()[m
+[32m+[m[32m        # Check if student is enrolled[m
+[32m+[m[32m        enrollment = conn.execute('''[m
+[32m+[m[32m            SELECT * FROM enrollments[m[41m [m
+[32m+[m[32m            WHERE student_id = ? AND course_id = ? AND status = 'active'[m
+[32m+[m[32m        ''', (session['user_id'], course_id)).fetchone()[m
+[32m+[m[41m        [m
+[32m+[m[32m        if enrollment:[m
+[32m+[m[32m            # Calculate progress based on completed lessons[m
+[32m+[m[32m            total_lessons = len(lessons)[m
+[32m+[m[32m            if total_lessons > 0:[m
+[32m+[m[32m                completed_lessons = conn.execute('''[m
+[32m+[m[32m                    SELECT COUNT(*) as count FROM progress[m[41m [m
+[32m+[m[32m                    WHERE user_id = ? AND lesson_id IN ([m
+[32m+[m[32m                        SELECT id FROM lessons WHERE course_id = ?[m
+[32m+[m[32m                    ) AND completed = 1[m
+[32m+[m[32m                ''', (session['user_id'], course_id)).fetchone()['count'][m
+[32m+[m[41m                [m
+[32m+[m[32m                progress_percentage = (completed_lessons / total_lessons) * 100[m
+[32m+[m[32m                progress = {[m
+[32m+[m[32m                    'progress': round(progress_percentage, 1),[m
+[32m+[m[32m                    'completed_lessons': completed_lessons,[m
+[32m+[m[32m                    'total_lessons': total_lessons[m
+[32m+[m[32m                }[m
+ [m
+     conn.close()[m
+     return render_template('course_view.html', course=course, lessons=lessons, progress=progress)[m
+[1mdiff --git a/routes/student.py b/routes/student.py[m
+[1mindex bda1756..6703a30 100644[m
+[1m--- a/routes/student.py[m
+[1m+++ b/routes/student.py[m
+[36m@@ -216,8 +216,7 @@[m [mdef update_progress():[m
+         [m
+         if not lesson:[m
+             return jsonify({'error': 'Lesson not found or not enrolled in course'}), 404[m
+[31m-        [m
+[31m-        # Check if progress already exists[m
+[32m+[m[32m          # Check if progress already exists[m
+         existing_progress = conn.execute('''[m
+             SELECT id FROM progress [m
+             WHERE user_id = ? AND lesson_id = ?[m
+[36m@@ -231,11 +230,11 @@[m [mdef update_progress():[m
+                 WHERE user_id = ? AND lesson_id = ?[m
+             ''', (data['completed'], session['user_id'], data['lesson_id']))[m
+         else:[m
+[31m-            # Create new progress entry[m
+[32m+[m[32m            # Create new progress entry - include course_id from lesson[m
+             conn.execute('''[m
+[31m-                INSERT INTO progress (user_id, lesson_id, completed, updated_at)[m
+[31m-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)[m
+[31m-            ''', (session['user_id'], data['lesson_id'], data['completed']))[m
+[32m+[m[32m                INSERT INTO progress (user_id, course_id, lesson_id, completed, updated_at)[m
+[32m+[m[32m                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)[m
+[32m+[m[32m            ''', (session['user_id'], lesson['course_id'], data['lesson_id'], data['completed']))[m
+         [m
+         conn.commit()[m
+         [m
+[36m@@ -371,13 +370,10 @@[m [mdef find_tutors():[m
+         [m
+         query = '''[m
+             SELECT DISTINCT u.id, u.username, u.email,[m
+[31m-                   GROUP_CONCAT(DISTINCT c.title) as subjects,[m
+[31m-                   AVG(sr.rating) as avg_rating,[m
+[31m-                   COUNT(DISTINCT sr.id) as rating_count[m
+[32m+[m[32m                   GROUP_CONCAT(DISTINCT c.title) as subjects[m
+             FROM users u[m
+             LEFT JOIN sessions s ON u.id = s.tutor_id[m
+             LEFT JOIN courses c ON s.course_id = c.id[m
+[31m-            LEFT JOIN session_ratings sr ON s.id = sr.session_id[m
+             WHERE u.role = 'tutor' AND u.is_active = 1[m
+         '''[m
+         params = [][m
+[36m@@ -388,7 +384,7 @@[m [mdef find_tutors():[m
+         [m
+         query += '''[m
+             GROUP BY u.id, u.username, u.email[m
+[31m-            ORDER BY avg_rating DESC NULLS LAST, u.username[m
+[32m+[m[32m            ORDER BY u.username[m
+         '''[m
+         [m
+         tutors = conn.execute(query, params).fetchall()[m
+[1mdiff --git a/schema.sql b/schema.sql[m
+[1mindex c45e351..06f30a6 100644[m
+[1m--- a/schema.sql[m
+[1m+++ b/schema.sql[m
+[36m@@ -50,7 +50,7 @@[m [mCREATE TABLE IF NOT EXISTS progress ([m
+     completed BOOLEAN DEFAULT FALSE,[m
+     last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,[m
+     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,[m
+[31m-    UNIQUE(user_id, course_id),[m
+[32m+[m[32m    UNIQUE(user_id, course_id, lesson_id),[m
+     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,[m
+     FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,[m
+     FOREIGN KEY (lesson_id) REFERENCES lessons (id) ON DELETE SET NULL[m
+[1mdiff --git a/static/js/main.js b/static/js/main.js[m
+[1mindex 9f96dab..fa8f842 100644[m
+[1m--- a/static/js/main.js[m
+[1m+++ b/static/js/main.js[m
+[36m@@ -1,7 +1,7 @@[m
+ // Learning Hub JavaScript functionality[m
+ [m
+ // Initialize when DOM is loaded[m
+[31m-document.addEventListener('DOMContentLoaded', function() {[m
+[32m+[m[32mdocument.addEventListener('DOMContentLoaded', function () {[m
+     // Initialize Bootstrap tooltips[m
+     initializeTooltips();[m
+ [m
+[36m@@ -50,9 +50,9 @@[m [mfunction initializeProgressRings() {[m
+ [m
+ // Auto-hide alerts after 5 seconds[m
+ function autoHideAlerts() {[m
+[31m-    setTimeout(function() {[m
+[32m+[m[32m    setTimeout(function () {[m
+         const alerts = document.querySelectorAll('.alert');[m
+[31m-        alerts.forEach(function(alert) {[m
+[32m+[m[32m        alerts.forEach(function (alert) {[m
+             if (bootstrap.Alert.getInstance(alert)) {[m
+                 const bsAlert = bootstrap.Alert.getInstance(alert);[m
+                 bsAlert.close();[m
+[36m@@ -76,7 +76,7 @@[m [mfunction updateProgress(courseId, lessonId = null) {[m
+     const button = event.target;[m
+     const originalText = button.innerHTML;[m
+     button.innerHTML = '<span class="loading-spinner"></span> Updating...';[m
+[31m-    button.disabled = true;    fetch('/student/api/update_progress_legacy', {[m
+[32m+[m[32m    button.disabled = true; fetch('/student/api/update_progress_legacy', {[m
+         method: 'POST',[m
+         headers: {[m
+             'Content-Type': 'application/json',[m
+[36m@@ -88,48 +88,48 @@[m [mfunction updateProgress(courseId, lessonId = null) {[m
+             progress: newProgress[m
+         })[m
+     })[m
+[31m-    .then(response => response.json())[m
+[31m-    .then(data => {[m
+[31m-        if (data.status === 'success') {[m
+[31m-            // Animate progress bar update[m
+[31m-            progressElement.style.width = newProgress + '%';[m
+[31m-            progressElement.setAttribute('aria-valuenow', newProgress);[m
+[31m-[m
+[31m-            // Update progress text[m
+[31m-            const progressText = document.querySelector(`[data-course="${courseId}"] .progress-text`);[m
+[31m-            if (progressText) {[m
+[31m-                progressText.textContent = newProgress + '% Complete';[m
+[31m-            }[m
+[32m+[m[32m        .then(response => response.json())[m
+[32m+[m[32m        .then(data

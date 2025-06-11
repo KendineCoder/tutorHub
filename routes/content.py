@@ -41,6 +41,7 @@ def course_view(course_id):
 
     # Get user progress if student
     progress = None
+    lesson_progress = []
     if session['user_role'] == 'student':
         # Check if student is enrolled
         enrollment = conn.execute('''
@@ -49,7 +50,15 @@ def course_view(course_id):
         ''', (session['user_id'], course_id)).fetchone()
         
         if enrollment:
-            # Calculate progress based on completed lessons
+            # Get lesson-specific progress
+            lesson_progress = conn.execute('''
+                SELECT lesson_id, completed FROM progress 
+                WHERE user_id = ? AND lesson_id IN (
+                    SELECT id FROM lessons WHERE course_id = ?
+                )
+            ''', (session['user_id'], course_id)).fetchall()
+            
+            # Calculate overall progress based on completed lessons
             total_lessons = len(lessons)
             if total_lessons > 0:
                 completed_lessons = conn.execute('''
@@ -67,7 +76,7 @@ def course_view(course_id):
                 }
 
     conn.close()
-    return render_template('course_view.html', course=course, lessons=lessons, progress=progress)
+    return render_template('course_view.html', course=course, lessons=lessons, progress=progress, lesson_progress=lesson_progress)
 
 
 @content_bp.route('/lesson/create/<int:course_id>')

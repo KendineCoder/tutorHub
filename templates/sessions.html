@@ -1,0 +1,542 @@
+{% extends "base.html" %} {% block title %}My Sessions - Learning Hub{% endblock
+%} {% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-2">
+      <div class="sidebar p-3">
+        <h5 class="mb-4">
+          <i class="fas fa-user-graduate me-2"></i>Student Portal
+        </h5>
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.dashboard') }}">
+              <i class="fas fa-tachometer-alt me-2"></i>Overview
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.my_courses') }}">
+              <i class="fas fa-book me-2"></i>My Courses
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('student.sessions') }}">
+              <i class="fas fa-calendar me-2"></i>Sessions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.progress') }}">
+              <i class="fas fa-chart-line me-2"></i>Progress
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9">
+      <div class="main-content">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2><i class="fas fa-calendar me-2"></i>My Sessions</h2>
+            <p class="text-muted">
+              Manage your tutoring sessions and schedule new ones
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="openScheduleModal()">
+            <i class="fas fa-plus me-2"></i>Schedule New Session
+          </button>
+        </div>
+
+        <!-- Session Stats -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="stats-card text-center">
+              <h4 class="text-primary">{{ current_sessions|length }}</h4>
+              <p class="mb-0">Upcoming Sessions</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stats-card text-center">
+              <h4 class="text-success">{{ completed_sessions|length }}</h4>
+              <p class="mb-0">Completed Sessions</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stats-card text-center">
+              <h4 class="text-info">{{ total_hours }}</h4>
+              <p class="mb-0">Total Hours</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="stats-card text-center">
+              <h4 class="text-warning">{{ active_tutors|length }}</h4>
+              <p class="mb-0">Active Tutors</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Session Alert -->
+        {% if current_session %}
+        <div
+          class="alert alert-info alert-dismissible fade show mb-4"
+          role="alert"
+        >
+          <div class="d-flex align-items-center">
+            <i
+              class="fas fa-video text-info me-3"
+              style="font-size: 1.5rem"
+            ></i>
+            <div class="flex-grow-1">
+              <h6 class="mb-1">Session in Progress</h6>
+              <p class="mb-0">
+                You have an active session with {{ current_session.tutor_name }}
+                for {{ current_session.course_title }}
+              </p>
+            </div>
+            <a
+              href="{{ url_for('student.join_session', session_id=current_session.id) }}"
+              class="btn btn-info"
+            >
+              <i class="fas fa-video me-1"></i>Rejoin Session
+            </a>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+          ></button>
+        </div>
+        {% endif %}
+
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs mb-4" id="sessionTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="upcoming-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#upcoming"
+              type="button"
+              role="tab"
+            >
+              <i class="fas fa-clock me-2"></i>Upcoming Sessions ({{
+              current_sessions|length }})
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="history-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#history"
+              type="button"
+              role="tab"
+            >
+              <i class="fas fa-history me-2"></i>Session History ({{
+              completed_sessions|length }})
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="calendar-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#calendar"
+              type="button"
+              role="tab"
+            >
+              <i class="fas fa-calendar-alt me-2"></i>Calendar View
+            </button>
+          </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="sessionTabContent">
+          <!-- Upcoming Sessions Tab -->
+          <div class="tab-pane fade show active" id="upcoming" role="tabpanel">
+            {% if current_sessions %}
+            <div class="row">
+              {% for session in current_sessions %}
+              <div class="col-md-6 mb-4">
+                <div
+                  class="card session-card"
+                  data-session-id="{{ session.id }}"
+                >
+                  <div class="card-body">
+                    <!-- Session Header -->
+                    <div
+                      class="d-flex justify-content-between align-items-start mb-3"
+                    >
+                      <div>
+                        <h6 class="card-title mb-1">
+                          <i
+                            class="fas fa-chalkboard-teacher me-2 text-primary"
+                          ></i>
+                          {{ session.tutor_name }}
+                        </h6>
+                        <p class="text-muted mb-0">
+                          {% if session.course_title %} {{ session.course_title
+                          }} {% else %} {{ session.course_title }} {% endif %}
+                        </p>
+                      </div>
+                      <span
+                        class="badge bg-{{ 'success' if session.status == 'scheduled' else 'warning' if session.status == 'rescheduled' else 'info' }}"
+                      >
+                        {{ session.status.title().replace('_', ' ') }}
+                      </span>
+                    </div>
+
+                    <!-- Session Info -->
+                    <div class="row mb-3">
+                      <div class="col-6">
+                        <small class="text-muted d-block">
+                          <i class="fas fa-calendar me-1"></i>Date
+                        </small>
+                        <strong>{{ session.scheduled_date }}</strong>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted d-block">
+                          <i class="fas fa-clock me-1"></i>Time
+                        </small>
+                        <strong>{{ session.scheduled_time }}</strong>
+                        <small class="text-primary"
+                          >({{ session.duration or 60 }} min)</small
+                        >
+                      </div>
+                    </div>
+
+                    <!-- Session Notes -->
+                    {% if session.notes %}
+                    <div class="mb-3">
+                      <small class="text-muted d-block mb-1">
+                        <i class="fas fa-sticky-note me-1"></i>Notes
+                      </small>
+                      <p class="small mb-0">
+                        {{ session.notes[:100] }}{% if session.notes|length >
+                        100 %}...{% endif %}
+                      </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                      {% if session.status == 'scheduled' %}
+                      <a
+                        href="{{ url_for('student.join_session', session_id=session.id) }}"
+                        class="btn btn-success btn-sm"
+                      >
+                        <i class="fas fa-video me-1"></i>Join Session
+                      </a>
+                      <div class="row">
+                        <div class="col-6">
+                          <button
+                            class="btn btn-outline-warning btn-sm w-100"
+                            onclick="rescheduleSession({{ session.id }})"
+                          >
+                            <i class="fas fa-calendar-alt me-1"></i>Reschedule
+                          </button>
+                        </div>
+                        <div class="col-6">
+                          <button
+                            class="btn btn-outline-danger btn-sm w-100"
+                            onclick="cancelSession({{ session.id }})"
+                          >
+                            <i class="fas fa-times me-1"></i>Cancel
+                          </button>
+                        </div>
+                      </div>
+                      {% elif session.status == 'in_progress' %}
+                      <a
+                        href="{{ url_for('student.join_session', session_id=session.id) }}"
+                        class="btn btn-info btn-sm"
+                      >
+                        <i class="fas fa-video me-1"></i>Rejoin Session
+                      </a>
+                      <small class="text-center text-muted">
+                        <i class="fas fa-clock me-1"></i>Session is currently
+                        active
+                      </small>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+              <i class="fas fa-calendar me-2"></i>
+              No upcoming sessions scheduled.
+              <a href="#" onclick="openScheduleModal()" class="alert-link"
+                >Schedule your first session</a
+              >!
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Session History Tab -->
+          <div class="tab-pane fade" id="history" role="tabpanel">
+            {% if completed_sessions %}
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Tutor</th>
+                    <th>Course</th>
+                    <th>Date</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Rating</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for session in completed_sessions %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <i
+                          class="fas fa-chalkboard-teacher me-2 text-primary"
+                        ></i>
+                        <div>
+                          <strong>{{ session.tutor_name }}</strong>
+                          <br /><small class="text-muted"
+                            >{{ session.tutor_email or '' }}</small
+                          >
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {% if session.course_title %}
+                      <span class="badge bg-primary"
+                        >{{ session.course_title }}</span
+                      >
+                      {% else %}
+                      <span class="badge bg-primary"
+                        >{{ session.course_title }}</span
+                      >
+                      {% endif %}
+                    </td>
+                    <td>
+                      <i class="fas fa-calendar me-1"></i>{{
+                      session.scheduled_date }} <br /><small class="text-muted"
+                        >{{ session.scheduled_time }}</small
+                      >
+                    </td>
+                    <td>{{ session.duration or 60 }} min</td>
+                    <td>
+                      <span
+                        class="badge bg-{{ 'success' if session.status == 'completed' else 'danger' if session.status == 'cancelled' else 'secondary' }}"
+                      >
+                        {{ session.status.title() }}
+                      </span>
+                    </td>
+                    <td>
+                      {% if session.status == 'completed' %}
+                      <div class="rating">
+                        {% for i in range(5) %}
+                        <i
+                          class="fas fa-star {{ 'text-warning' if i < (session.rating or 0) else 'text-muted' }}"
+                        ></i>
+                        {% endfor %}
+                      </div>
+                      {% else %}
+                      <span class="text-muted">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="dropdown">
+                        <button
+                          class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                          type="button"
+                          data-bs-toggle="dropdown"
+                        >
+                          <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li>
+                            <button
+                              class="dropdown-item"
+                              onclick="viewSessionDetails({{ session.id }})"
+                            >
+                              <i class="fas fa-eye me-2"></i>View Details
+                            </button>
+                          </li>
+                          {% if session.status == 'completed' %}
+                          <li>
+                            <button
+                              class="dropdown-item"
+                              onclick="rateSession({{ session.id }})"
+                            >
+                              <i class="fas fa-star me-2"></i>Rate Session
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              class="dropdown-item"
+                              onclick="bookAgain({{ session.tutor_id }}, {{ session.course_id or 'null' }})"
+                            >
+                              <i class="fas fa-redo me-2"></i>Book Again
+                            </button>
+                          </li>
+                          {% endif %}
+                          <li>
+                            <button
+                              class="dropdown-item"
+                              onclick="downloadSessionInfo({{ session.id }})"
+                            >
+                              <i class="fas fa-download me-2"></i>Download Info
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+              <i class="fas fa-history me-2"></i>
+              No session history available yet. Complete some sessions to see
+              them here!
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Calendar View Tab -->
+          <div class="tab-pane fade" id="calendar" role="tabpanel">
+            <div class="card">
+              <div class="card-body">
+                <div id="sessionsCalendar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Session Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-calendar-plus me-2"></i>Schedule New Session
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="scheduleForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="courseSelect" class="form-label"
+                  >Course <span class="text-danger">*</span></label
+                >
+                <select class="form-select" id="courseSelect" required>
+                  <option value="">Select a course</option>
+                  {% for course in available_courses %}
+                  <option value="{{ course.id }}">{{ course.title }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="tutorSelect" class="form-label"
+                  >Tutor <span class="text-danger">*</span></label
+                >
+                <select class="form-select" id="tutorSelect" required>
+                  <option value="">Select a tutor</option>
+                  <!-- Will be populated dynamically -->
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="sessionDate" class="form-label"
+                  >Date <span class="text-danger">*</span></label
+                >
+                <input
+                  type="date"
+                  class="form-control"
+                  id="sessionDate"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="availableSlots" class="form-label"
+                  >Available Time Slots
+                  <span class="text-danger">*</span></label
+                >
+                <select class="form-select" id="availableSlots" required>
+                  <option value="">Select date and tutor first</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="sessionDuration" class="form-label">Duration</label>
+            <select class="form-select" id="sessionDuration">
+              <option value="30">30 minutes</option>
+              <option value="60" selected>60 minutes</option>
+              <option value="90">90 minutes</option>
+              <option value="120">120 minutes</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="sessionNotes" class="form-label">Session Notes</label>
+            <textarea
+              class="form-control"
+              id="sessionNotes"
+              rows="3"
+              placeholder="Any specific topics, goals, or requirements for this session..."
+            ></textarea>
+          </div>
+
+          <!-- Tutor Availability Preview -->
+          <div id="tutorAvailabilityPreview" class="alert alert-light d-none">
+            <h6>
+              <i class="fas fa-clock me-2"></i>Tutor Availability for Selected
+              Date
+            </h6>
+            <div id="availabilitySlots"></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick="submitScheduleForm()"
+          id="scheduleSubmitBtn"
+        >
+          <i class="fas fa-calendar-check me-2"></i>Schedule Session
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/sessions.js') }}"></script>
+{% endblock %}

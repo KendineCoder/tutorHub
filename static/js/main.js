@@ -305,8 +305,23 @@ function openScheduleModal(tutorId = null, courseId = null) {
     modal.show();
 }
 
-// Submit schedule form
+// Submit schedule form - This function is overridden in sessions.js for the sessions page
 function submitScheduleForm() {
+    console.log('main.js submitScheduleForm called');
+
+    // Check if we're on the sessions page - if so, don't interfere
+    if (window.location.pathname.includes('sessions') || window.location.pathname.includes('session')) {
+        console.log('On sessions page - sessions.js should handle this');
+        return;
+    }
+
+    // Check if the sessions version exists and defer to it
+    if (typeof window.sessionsSubmitScheduleForm === 'function') {
+        console.log('Deferring to sessions.js version');
+        return window.sessionsSubmitScheduleForm();
+    }
+
+    // Fallback for other pages
     if (!validateForm('scheduleForm')) {
         showNotification('Please fill in all required fields', 'warning');
         return;

@@ -1,0 +1,457 @@
+{% extends "base.html" %} {% block title %}Progress - Learning Hub{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar Navigation -->
+    <div class="col-md-2">
+      <div class="sidebar p-3">
+        <h5 class="mb-4">
+          <i class="fas fa-user-graduate me-2"></i>Student Portal
+        </h5>
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.dashboard') }}">
+              <i class="fas fa-tachometer-alt me-2"></i>Overview
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.my_courses') }}">
+              <i class="fas fa-book me-2"></i>My Courses
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('student.sessions') }}">
+              <i class="fas fa-calendar me-2"></i>Sessions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('student.progress') }}">
+              <i class="fas fa-chart-line me-2"></i>Progress
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-10">
+      <div class="main-content p-4">
+        <h2 class="mb-4">Learning Progress</h2>
+
+        <!-- Overall Stats -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-book fa-2x text-primary mb-2"></i>
+                <h4 class="mb-0">{{ total_courses }}</h4>
+                <small class="text-muted">Total Courses</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h4 class="mb-0">{{ completed_courses }}</h4>
+                <small class="text-muted">Completed</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-play-circle fa-2x text-warning mb-2"></i>
+                <h4 class="mb-0">{{ active_courses }}</h4>
+                <small class="text-muted">In Progress</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-percentage fa-2x text-info mb-2"></i>
+                <h4 class="mb-0">{{ average_progress }}%</h4>
+                <small class="text-muted">Avg Progress</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Tabs -->
+        <ul class="nav nav-tabs mb-4" id="progressTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="current-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#current"
+              type="button"
+            >
+              <i class="fas fa-play me-1"></i>Current Courses
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="completed-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#completed"
+              type="button"
+            >
+              <i class="fas fa-check me-1"></i>Completed Courses
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="analytics-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#analytics"
+              type="button"
+            >
+              <i class="fas fa-chart-bar me-1"></i>Analytics
+            </button>
+          </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="progressTabContent">
+          <!-- Current Courses -->
+          <div class="tab-pane fade show active" id="current" role="tabpanel">
+            <div class="row">
+              {% for course in current_courses %}
+              <div class="col-md-6 mb-4">
+                <div class="card dashboard-card">
+                  <div class="card-body">
+                    <div
+                      class="d-flex justify-content-between align-items-start mb-3"
+                    >
+                      <h6 class="card-title">{{ course.title }}</h6>
+                      <span class="badge bg-primary"
+                        >{{ course.progress }}%</span
+                      >
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress mb-3" style="height: 12px">
+                      <div
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: {{ course.progress }}%"
+                        aria-valuenow="{{ course.progress }}"
+                      ></div>
+                    </div>
+
+                    <!-- Lesson Progress -->
+                    <div class="row text-center mb-3">
+                      <div class="col-4">
+                        <small class="text-muted d-block">Total</small>
+                        <strong>{{ course.total_lessons }}</strong>
+                        <small class="text-muted">lessons</small>
+                      </div>
+                      <div class="col-4">
+                        <small class="text-muted d-block">Completed</small>
+                        <strong class="text-success"
+                          >{{ course.completed_lessons }}</strong
+                        >
+                        <small class="text-muted">lessons</small>
+                      </div>
+                      <div class="col-4">
+                        <small class="text-muted d-block">Remaining</small>
+                        <strong class="text-warning"
+                          >{{ course.total_lessons - course.completed_lessons
+                          }}</strong
+                        >
+                        <small class="text-muted">lessons</small>
+                      </div>
+                    </div>
+
+                    <!-- Time Stats -->
+                    <div
+                      class="d-flex justify-content-between text-muted small mb-3"
+                    >
+                      <span>
+                        <i class="fas fa-clock me-1"></i>
+                        {{ course.time_spent or 0 }}h studied
+                      </span>
+                      <span>
+                        <i class="fas fa-calendar me-1"></i>
+                        Last activity: {{ course.last_activity or 'N/A' }}
+                      </span>
+                    </div>
+
+                    <!-- Action Button -->
+                    <a
+                      href="{{ url_for('content.course_view', course_id=course.id) }}"
+                      class="btn btn-primary btn-sm w-100"
+                    >
+                      <i class="fas fa-play me-1"></i>Continue Learning
+                    </a>
+                  </div>
+                </div>
+              </div>
+              {% endfor %} {% if not current_courses %}
+              <div class="col-12">
+                <div class="text-center py-5">
+                  <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
+                  <h5 class="text-muted">No courses in progress</h5>
+                  <p class="text-muted">
+                    Start a new course to track your progress here!
+                  </p>
+                  <a
+                    href="{{ url_for('student.my_courses') }}"
+                    class="btn btn-primary"
+                  >
+                    <i class="fas fa-plus me-2"></i>Browse Courses
+                  </a>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Completed Courses -->
+          <div class="tab-pane fade" id="completed" role="tabpanel">
+            <div class="row">
+              {% for course in completed_courses_list %}
+              <div class="col-md-6 mb-4">
+                <div class="card dashboard-card">
+                  <div class="card-body">
+                    <div
+                      class="d-flex justify-content-between align-items-start mb-3"
+                    >
+                      <h6 class="card-title">{{ course.title }}</h6>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check me-1"></i>Completed
+                      </span>
+                    </div>
+
+                    <!-- Completion Stats -->
+                    <div class="row text-center mb-3">
+                      <div class="col-4">
+                        <small class="text-muted d-block">Lessons</small>
+                        <strong>{{ course.total_lessons }}</strong>
+                      </div>
+                      <div class="col-4">
+                        <small class="text-muted d-block">Time Spent</small>
+                        <strong>{{ course.time_spent or 0 }}h</strong>
+                      </div>
+                      <div class="col-4">
+                        <small class="text-muted d-block">Grade</small>
+                        <strong class="text-success"
+                          >{{ course.final_grade or 'A+' }}</strong
+                        >
+                      </div>
+                    </div>
+
+                    <!-- Completion Date -->
+                    <div class="text-center mb-3">
+                      <small class="text-muted">
+                        <i class="fas fa-calendar-check me-1"></i>
+                        Completed on {{ course.completion_date[:10] if
+                        course.completion_date else 'N/A' }}
+                      </small>
+                    </div>
+
+                    <!-- Certificate & Review -->
+                    <div class="btn-group w-100">
+                      <button
+                        class="btn btn-outline-success btn-sm"
+                        onclick="downloadCertificate({{ course.id }})"
+                      >
+                        <i class="fas fa-certificate me-1"></i>Certificate
+                      </button>
+                      <a
+                        href="{{ url_for('content.course_view', course_id=course.id) }}"
+                        class="btn btn-outline-primary btn-sm"
+                      >
+                        <i class="fas fa-eye me-1"></i>Review
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %} {% if not completed_courses_list %}
+              <div class="col-12">
+                <div class="text-center py-5">
+                  <i class="fas fa-trophy fa-4x text-muted mb-3"></i>
+                  <h5 class="text-muted">No completed courses yet</h5>
+                  <p class="text-muted">
+                    Complete your first course to earn achievements!
+                  </p>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Analytics -->
+          <div class="tab-pane fade" id="analytics" role="tabpanel">
+            <div class="row">
+              <!-- Learning Streak -->
+              <div class="col-md-6 mb-4">
+                <div class="card dashboard-card">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-fire me-2"></i>Learning Streak
+                    </h6>
+                  </div>
+                  <div class="card-body text-center">
+                    <h2 class="text-warning mb-2">
+                      {{ learning_streak }} days
+                    </h2>
+                    <p class="text-muted mb-3">Keep it up! 🔥</p>
+                    <div class="progress mb-2">
+                      <div
+                        class="progress-bar bg-warning"
+                        style="width: {{ (learning_streak % 7) * 14.28 }}%"
+                      ></div>
+                    </div>
+                    <small class="text-muted"
+                      >{{ 7 - (learning_streak % 7) }} days to next
+                      milestone</small
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Weekly Progress -->
+              <div class="col-md-6 mb-4">
+                <div class="card dashboard-card">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-chart-line me-2"></i>This Week's Progress
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="row text-center mb-3">
+                      <div class="col-6">
+                        <h4 class="text-primary">{{ weekly_lessons }}</h4>
+                        <small class="text-muted">Lessons Completed</small>
+                      </div>
+                      <div class="col-6">
+                        <h4 class="text-success">{{ weekly_hours }}h</h4>
+                        <small class="text-muted">Hours Studied</small>
+                      </div>
+                    </div>
+
+                    <!-- Daily Progress Bar -->
+                    <div class="mb-2">
+                      <div
+                        class="d-flex justify-content-between small text-muted mb-1"
+                      >
+                        {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat',
+                        'Sun'] %}
+                        <span>{{ day }}</span>
+                        {% endfor %}
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        {% for activity in daily_activity %}
+                        <div
+                          class="bg-primary rounded"
+                          style="width: 12px; height: {{ activity * 20 }}px; min-height: 4px;"
+                        ></div>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Achievements -->
+              <div class="col-md-12 mb-4">
+                <div class="card dashboard-card">
+                  <div class="card-header">
+                    <h6 class="mb-0">
+                      <i class="fas fa-trophy me-2"></i>Achievements
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      {% for achievement in achievements %}
+                      <div class="col-md-3 col-sm-6 mb-3">
+                        <div
+                          class="text-center p-3 border rounded {{ 'bg-warning bg-opacity-10' if achievement.earned else 'opacity-50' }}"
+                        >
+                          <i
+                            class="fas fa-{{ achievement.icon }} fa-2x mb-2 {{ 'text-warning' if achievement.earned else 'text-muted' }}"
+                          ></i>
+                          <h6 class="mb-1">{{ achievement.title }}</h6>
+                          <small class="text-muted"
+                            >{{ achievement.description }}</small
+                          >
+                          {% if achievement.earned %}
+                          <br /><small class="text-success">
+                            <i class="fas fa-check me-1"></i>Earned {{
+                            achievement.date_earned }}
+                          </small>
+                          {% endif %}
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function downloadCertificate(courseId) {
+    // Generate and download certificate
+    fetch(`/student/api/courses/${courseId}/certificate`, {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    })
+      .then((response) => {
+        if (response.ok) {
+          return response.blob();
+        }
+        throw new Error("Certificate not available");
+      })
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = `certificate-course-${courseId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showNotification("Certificate downloaded successfully!", "success");
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Certificate not available yet", "warning");
+      });
+  }
+
+  // Update progress data periodically
+  setInterval(() => {
+    fetch("/student/api/progress/summary")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          // Update any dynamic elements with fresh data
+          document.querySelectorAll("[data-progress]").forEach((element) => {
+            const courseId = element.dataset.courseId;
+            const courseData = data.courses.find((c) => c.id == courseId);
+            if (courseData) {
+              element.style.width = courseData.progress + "%";
+              element.setAttribute("aria-valuenow", courseData.progress);
+            }
+          });
+        }
+      })
+      .catch((error) => console.error("Error updating progress:", error));
+  }, 30000); // Update every 30 seconds
+</script>
+{% endblock %}

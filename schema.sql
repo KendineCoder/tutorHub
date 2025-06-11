@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     scheduled_date DATE NOT NULL,
     scheduled_time TIME NOT NULL,
     duration INTEGER DEFAULT 60, -- in minutes
-    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'rescheduled')),
+    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled', 'rescheduled')),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -108,6 +108,20 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- Session reviews and ratings
+CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE,
+    UNIQUE(session_id, student_id)
 );
 
 -- ==================== SAMPLE DATA ====================
@@ -187,6 +201,13 @@ INSERT OR IGNORE INTO notifications (user_id, title, message, type) VALUES
 (6, 'Great Progress!', 'You have completed 85% of your English Literature course!', 'success'),
 (3, 'New Student Assigned', 'You have been assigned a new student: Sarah', 'info');
 
+-- Insert sample reviews
+INSERT OR IGNORE INTO reviews (session_id, student_id, rating, review_text) VALUES
+(1, 2, 5, 'Great session, learned a lot!'),
+(2, 2, 4, 'Good session, but could be improved.'),
+(3, 6, 5, 'Excellent explanation of concepts.'),
+(4, 6, 3, 'The session was okay, not very engaging.');
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
@@ -196,3 +217,4 @@ CREATE INDEX IF NOT EXISTS idx_sessions_tutor ON sessions(tutor_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_reviews_session_student ON reviews(session_id, student_id);
