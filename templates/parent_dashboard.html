@@ -1,79 +1,210 @@
-{% extends "base.html" %}
-
-{% block title %}Parent Dashboard - Learning Hub{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Parent Dashboard - Learning Hub{%
+endblock %} {% block content %}
 <div class="row">
-    <!-- Sidebar -->
-    <div class="col-md-3">
-        <div class="sidebar p-3">
-            <h5 class="mb-4"><i class="fas fa-user-friends me-2"></i>Parent Portal</h5>
-            <ul class="nav nav-pills flex-column">
-                <li class="nav-item">
-                    <a class="nav-link active" href="#overview">
-                        <i class="fas fa-tachometer-alt me-2"></i>Overview
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#children">
-                        <i class="fas fa-child me-2"></i>Children
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#progress">
-                        <i class="fas fa-chart-line me-2"></i>Progress
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#sessions">
-                        <i class="fas fa-calendar me-2"></i>Sessions
-                    </a>
-                </li>
-            </ul>
-        </div>
+  <!-- Sidebar -->
+  <div class="col-md-3">
+    <div class="sidebar p-3">
+      <h5 class="mb-4">
+        <i class="fas fa-user-friends me-2"></i>Parent Portal
+      </h5>
+      <ul class="nav nav-pills flex-column">
+        <li class="nav-item">
+          <a class="nav-link active" href="{{ url_for('parent.dashboard') }}">
+            <i class="fas fa-tachometer-alt me-2"></i>Overview
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('parent.children') }}">
+            <i class="fas fa-child me-2"></i>Children
+          </a>
+        </li>
+      </ul>
     </div>
+  </div>
 
-    <!-- Main Content -->
-    <div class="col-md-9">
-        <div class="main-content">
-            <h2 class="mb-4">Parent Dashboard</h2>
+  <!-- Main Content -->
+  <div class="col-md-9">
+    <div class="main-content">
+      <h2 class="mb-4">Parent Dashboard</h2>
 
-            <!-- Children's Progress -->
-            <div class="row">
-                <div class="col-12">
-                    <h4 class="mb-3">Children's Progress</h4>
-                    {% if children_progress %}
-                        {% for progress in children_progress %}
-                        <div class="card dashboard-card course-card mb-3">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <h6 class="card-title">{{ progress.username }}</h6>
-                                        <p class="card-text">{{ progress.title }}</p>
-                                    </div>
-                                    <div class="col-md-4 text-end">
-                                        <div class="progress mb-2">
-                                            <div class="progress-bar" role="progressbar"
-                                                 style="width: {{ progress.progress }}%"
-                                                 aria-valuenow="{{ progress.progress }}"
-                                                 aria-valuemin="0" aria-valuemax="100">
-                                            </div>
-                                        </div>
-                                        <small class="text-muted">{{ progress.progress }}% Complete</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No children's progress data available yet.
-                        </div>
-                    {% endif %}
-                </div>
+      <!-- Children Summary -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card dashboard-card">
+            <div class="card-body text-center">
+              <i class="fas fa-users text-primary fs-1 mb-3"></i>
+              <h4>{{ children|length }}</h4>
+              <p class="text-muted">Total Children</p>
             </div>
+          </div>
         </div>
+        <div class="col-md-4">
+          <div class="card dashboard-card">
+            <div class="card-body text-center">
+              <i class="fas fa-book text-success fs-1 mb-3"></i>
+              <h4>
+                {{ children_progress|sum(attribute='total_courses') or 0 }}
+              </h4>
+              <p class="text-muted">Total Courses</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card dashboard-card">
+            <div class="card-body text-center">
+              <i class="fas fa-calendar text-info fs-1 mb-3"></i>
+              <h4>{{ recent_sessions|length }}</h4>
+              <p class="text-muted">Recent Sessions</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Children's Progress -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="mb-0">Children's Progress</h5>
+              <a
+                href="{{ url_for('parent.children') }}"
+                class="btn btn-outline-primary btn-sm"
+              >
+                <i class="fas fa-cog me-1"></i>Manage Children
+              </a>
+            </div>
+            <div class="card-body">
+              {% if children_progress %} {% for child in children_progress %}
+              <div class="row align-items-center border-bottom py-3">
+                <div class="col-md-3">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar bg-primary text-white me-3">
+                      {{ child.username[0].upper() }}
+                    </div>
+                    <div>
+                      <strong>{{ child.username }}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-2 text-center">
+                  <span class="badge bg-primary"
+                    >{{ child.total_courses or 0 }} courses</span
+                  >
+                </div>
+                <div class="col-md-2 text-center">
+                  <span class="badge bg-success"
+                    >{{ child.completed_courses or 0 }} completed</span
+                  >
+                </div>
+                <div class="col-md-5">
+                  <div class="d-flex align-items-center">
+                    <div class="progress flex-grow-1 me-3">
+                      <div
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: {{ child.avg_progress or 0 }}%"
+                        aria-valuenow="{{ child.avg_progress or 0 }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                    <small class="text-muted"
+                      >{{ child.avg_progress or 0 }}%</small
+                    >
+                  </div>
+                </div>
+              </div>
+              {% endfor %} {% else %}
+              <div class="text-center py-4">
+                <i class="fas fa-user-plus text-muted fs-1 mb-3"></i>
+                <p class="text-muted">No children added yet.</p>
+                <a
+                  href="{{ url_for('parent.children') }}"
+                  class="btn btn-primary"
+                >
+                  <i class="fas fa-plus me-1"></i>Add Child
+                </a>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Sessions -->
+      {% if recent_sessions %}
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Recent Sessions</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Child</th>
+                      <th>Tutor</th>
+                      <th>Course</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for session in recent_sessions %}
+                    <tr>
+                      <td>{{ session.student_name }}</td>
+                      <td>{{ session.tutor_name }}</td>
+                      <td>{{ session.course_title or 'General' }}</td>
+                      <td>
+                        {{ session.scheduled_date }} {{ session.scheduled_time
+                        }}
+                      </td>
+                      <td>
+                        {% if session.status == 'completed' %}
+                        <span class="badge bg-success"
+                          >{{ session.status|title }}</span
+                        >
+                        {% elif session.status == 'scheduled' %}
+                        <span class="badge bg-primary"
+                          >{{ session.status|title }}</span
+                        >
+                        {% elif session.status == 'cancelled' %}
+                        <span class="badge bg-danger"
+                          >{{ session.status|title }}</span
+                        >
+                        {% else %}
+                        <span class="badge bg-secondary"
+                          >{{ session.status|title }}</span
+                        >
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
+  </div>
 </div>
+
+<style>
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+</style>
 {% endblock %}
