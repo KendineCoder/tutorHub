@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+
+{% block title %}My Sessions - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-2">
+      <div class="sidebar p-3">
+        <h5 class="mb-4">
+          <i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal
+        </h5>
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.dashboard') }}">
+              <i class="fas fa-tachometer-alt me-2"></i>Overview
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.my_students') }}">
+              <i class="fas fa-users me-2"></i>My Students
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('tutor.sessions') }}">
+              <i class="fas fa-calendar me-2"></i>Sessions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.availability') }}">
+              <i class="fas fa-clock me-2"></i>Availability
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-10">
+      <div class="main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2><i class="fas fa-calendar me-2"></i>My Sessions</h2>
+            <p class="text-muted">
+              Manage your tutoring sessions, view schedules, and track session history
+            </p>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" onclick="location.href='{{ url_for('tutor.my_students') }}'">
+              <i class="fas fa-calendar-plus me-2"></i>Schedule New Session
+            </button>
+          </div>
+        </div>
+
+        <!-- Sessions Statistics -->
+        <div class="row mb-4">
+          <div class="col-md-2">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-calendar-alt fa-2x text-primary mb-2"></i>
+                <h4 class="mb-0">{{ stats.total_sessions }}</h4>
+                <small class="text-muted">Total Sessions</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                <h4 class="mb-0">{{ stats.upcoming_sessions }}</h4>
+                <small class="text-muted">Upcoming</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h4 class="mb-0">{{ stats.completed_sessions }}</h4>
+                <small class="text-muted">Completed</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-play-circle fa-2x text-warning mb-2"></i>
+                <h4 class="mb-0">{{ stats.scheduled_sessions }}</h4>
+                <small class="text-muted">Scheduled</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                <h4 class="mb-0">{{ stats.cancelled_sessions }}</h4>
+                <small class="text-muted">Cancelled</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-spinner fa-2x text-secondary mb-2"></i>
+                <h4 class="mb-0">{{ stats.in_progress_sessions }}</h4>
+                <small class="text-muted">In Progress</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-3">
+                <label for="statusFilter" class="form-label">Status Filter</label>
+                <select class="form-select" id="statusFilter" onchange="applyFilters()">
+                  <option value="all" {{ 'selected' if current_status_filter == 'all' }}>All Statuses</option>
+                  <option value="scheduled" {{ 'selected' if current_status_filter == 'scheduled' }}>Scheduled</option>
+                  <option value="completed" {{ 'selected' if current_status_filter == 'completed' }}>Completed</option>
+                  <option value="cancelled" {{ 'selected' if current_status_filter == 'cancelled' }}>Cancelled</option>
+                  <option value="in_progress" {{ 'selected' if current_status_filter == 'in_progress' }}>In Progress</option>
+                  <option value="rescheduled" {{ 'selected' if current_status_filter == 'rescheduled' }}>Rescheduled</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label for="dateFilter" class="form-label">Date Filter</label>
+                <select class="form-select" id="dateFilter" onchange="applyFilters()">
+                  <option value="all" {{ 'selected' if current_date_filter == 'all' }}>All Dates</option>
+                  <option value="upcoming" {{ 'selected' if current_date_filter == 'upcoming' }}>Upcoming</option>
+                  <option value="today" {{ 'selected' if current_date_filter == 'today' }}>Today</option>
+                  <option value="this_week" {{ 'selected' if current_date_filter == 'this_week' }}>This Week</option>
+                  <option value="past" {{ 'selected' if current_date_filter == 'past' }}>Past</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                  <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times me-1"></i>Clear Filters
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="text-end">
+                  <span class="badge bg-primary">{{ sessions|length }} sessions shown</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions List -->
+        {% if sessions %}
+        <div class="row">
+          {% for session in sessions %}
+          <div class="col-12 mb-3">
+            <div class="card session-card">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <!-- Session Info -->
+                  <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                      <div class="session-icon me-3">
+                        {% if session.status == 'completed' %}
+                          <i class="fas fa-check-circle text-success"></i>
+                        {% elif session.status == 'cancelled' %}
+                          <i class="fas fa-times-circle text-danger"></i>
+                        {% elif session.status == 'in_progress' %}
+                          <i class="fas fa-play-circle text-warning"></i>
+                        {% elif session.status == 'rescheduled' %}
+                          <i class="fas fa-calendar-alt text-info"></i>
+                        {% else %}
+                          <i class="fas fa-clock text-primary"></i>
+                        {% endif %}
+                      </div>
+                      <div>
+                        <h6 class="mb-1">{{ session.student_name }}</h6>
+                        <small class="text-muted">{{ session.student_email }}</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Date & Time -->
+                  <div class="col-md-2">
+                    <div class="text-center">
+                      <div class="fw-bold">{{ session.scheduled_date }}</div>
+                      <div class="text-muted">{{ session.scheduled_time }}</div>
+                      <small class="badge bg-secondary">{{ session.duration }}min</small>
+                    </div>
+                  </div>
+
+                  <!-- Course -->
+                  <div class="col-md-2">
+                    <div class="text-center">
+                      {% if session.course_title %}
+                        <div class="fw-bold">{{ session.course_title }}</div>
+                        <small class="text-muted">Course Session</small>
+                      {% else %}
+                        <div class="text-muted">General Tutoring</div>
+                        <small class="text-muted">No specific course</small>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <!-- Status -->
+                  <div class="col-md-2">
+                    <div class="text-center">
+                      {% if session.status == 'completed' %}
+                        <span class="badge bg-success fs-6">Completed</span>
+                        {% if session.rating %}
+                          <div class="mt-1">
+                            <small class="text-warning">
+                              {% for i in range(session.rating) %}★{% endfor %}
+                              {% for i in range(5 - session.rating) %}☆{% endfor %}
+                            </small>
+                          </div>
+                        {% endif %}
+                      {% elif session.status == 'cancelled' %}
+                        <span class="badge bg-danger fs-6">Cancelled</span>
+                      {% elif session.status == 'in_progress' %}
+                        <span class="badge bg-warning fs-6">In Progress</span>
+                      {% elif session.status == 'rescheduled' %}
+                        <span class="badge bg-info fs-6">Rescheduled</span>
+                      {% else %}
+                        <span class="badge bg-primary fs-6">Scheduled</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="col-md-3">
+                    <div class="d-flex gap-1 justify-content-end">
+                      {% if session.status == 'scheduled' or session.status == 'rescheduled' %}
+                        <!-- Show action buttons for upcoming sessions -->
+                        <button class="btn btn-sm btn-outline-warning" 
+                                onclick="rescheduleSession({{ session.id }}, '{{ session.student_name }}', '{{ session.scheduled_date }}', '{{ session.scheduled_time }}')">
+                          <i class="fas fa-calendar-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="cancelSession({{ session.id }}, '{{ session.student_name }}', '{{ session.scheduled_date }}', '{{ session.scheduled_time }}')">
+                          <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" 
+                                onclick="startSession({{ session.id }})">
+                          <i class="fas fa-play me-1"></i>Start
+                        </button>
+                      {% elif session.status == 'completed' and session.review_text %}
+                        <button class="btn btn-sm btn-outline-info" 
+                                onclick="viewReview('{{ session.review_text }}', {{ session.rating }})">
+                          <i class="fas fa-comment"></i>
+                        </button>
+                      {% endif %}
+                      <button class="btn btn-sm btn-outline-secondary" 
+                              onclick="viewSessionDetails({{ session.id }})">
+                        <i class="fas fa-info"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+          <i class="fas fa-calendar me-2"></i>
+          No sessions found matching your criteria. 
+          <a href="{{ url_for('tutor.my_students') }}" class="alert-link">Schedule your first session</a>!
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel Session Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-times-circle me-2"></i>Cancel Session
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>Are you sure you want to cancel this session?</strong>
+        </div>
+        <div id="cancelSessionInfo" class="mb-3"></div>
+        <form id="cancelForm">
+          <input type="hidden" id="cancelSessionId">
+          <div class="mb-3">
+            <label for="cancellationReason" class="form-label">Reason for cancellation</label>
+            <textarea class="form-control" id="cancellationReason" rows="3" 
+                      placeholder="Please provide a reason for cancelling this session..."
+                      required></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Session</button>
+        <button type="button" class="btn btn-danger" onclick="confirmCancellation()">
+          <i class="fas fa-times me-1"></i>Cancel Session
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reschedule Session Modal -->
+<div class="modal fade" id="rescheduleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-calendar-alt me-2"></i>Reschedule Session
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="rescheduleSessionInfo" class="mb-3"></div>
+        <form id="rescheduleForm">
+          <input type="hidden" id="rescheduleSessionId">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="newDate" class="form-label">New Date</label>
+                <input type="date" class="form-control" id="newDate" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="newTime" class="form-label">New Time</label>
+                <input type="time" class="form-control" id="newTime" required>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="rescheduleReason" class="form-label">Reason for rescheduling</label>
+            <textarea class="form-control" id="rescheduleReason" rows="2" 
+                      placeholder="Optional reason for rescheduling..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" onclick="confirmReschedule()">
+          <i class="fas fa-calendar-alt me-1"></i>Reschedule Session
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-star me-2"></i>Session Review
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="reviewContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.session-card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.session-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.session-icon {
+  font-size: 1.5rem;
+}
+
+.dashboard-card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 12px;
+}
+</style>
+
+<script>
+// Apply filters
+function applyFilters() {
+  const status = document.getElementById('statusFilter').value;
+  const date = document.getElementById('dateFilter').value;
+  
+  const params = new URLSearchParams();
+  if (status !== 'all') params.append('status', status);
+  if (date !== 'all') params.append('date', date);
+  
+  window.location.href = '{{ url_for("tutor.sessions") }}?' + params.toString();
+}
+
+// Clear filters
+function clearFilters() {
+  window.location.href = '{{ url_for("tutor.sessions") }}';
+}
+
+// Cancel session
+function cancelSession(sessionId, studentName, date, time) {
+  document.getElementById('cancelSessionId').value = sessionId;
+  document.getElementById('cancelSessionInfo').innerHTML = `
+    <strong>Session Details:</strong><br>
+    Student: ${studentName}<br>
+    Date: ${date}<br>
+    Time: ${time}
+  `;
+  document.getElementById('cancellationReason').value = '';
+  
+  const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+  modal.show();
+}
+
+// Confirm cancellation
+function confirmCancellation() {
+  const sessionId = document.getElementById('cancelSessionId').value;
+  const reason = document.getElementById('cancellationReason').value;
+  
+  if (!reason.trim()) {
+    alert('Please provide a reason for cancellation');
+    return;
+  }
+  
+  fetch(`/tutor/api/sessions/${sessionId}/cancel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ reason: reason })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to cancel session');
+  });
+}
+
+// Reschedule session
+function rescheduleSession(sessionId, studentName, currentDate, currentTime) {
+  document.getElementById('rescheduleSessionId').value = sessionId;
+  document.getElementById('rescheduleSessionInfo').innerHTML = `
+    <strong>Current Session:</strong><br>
+    Student: ${studentName}<br>
+    Current Date: ${currentDate}<br>
+    Current Time: ${currentTime}
+  `;
+  
+  // Set minimum date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('newDate').min = today;
+  document.getElementById('newDate').value = '';
+  document.getElementById('newTime').value = '';
+  document.getElementById('rescheduleReason').value = '';
+  
+  const modal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
+  modal.show();
+}
+
+// Confirm reschedule
+function confirmReschedule() {
+  const sessionId = document.getElementById('rescheduleSessionId').value;
+  const newDate = document.getElementById('newDate').value;
+  const newTime = document.getElementById('newTime').value;
+  const reason = document.getElementById('rescheduleReason').value;
+  
+  if (!newDate || !newTime) {
+    alert('Please select both new date and time');
+    return;
+  }
+  
+  fetch(`/tutor/api/sessions/${sessionId}/reschedule`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ 
+      new_date: newDate, 
+      new_time: newTime,
+      reason: reason 
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to reschedule session');
+  });
+}
+
+// View review
+function viewReview(reviewText, rating) {
+  const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  document.getElementById('reviewContent').innerHTML = `
+    <div class="text-center mb-3">
+      <div class="h4 text-warning">${stars}</div>
+      <div class="text-muted">${rating} out of 5 stars</div>
+    </div>
+    <div class="alert alert-light">
+      <p class="mb-0">"${reviewText}"</p>
+    </div>
+  `;
+  
+  const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+  modal.show();
+}
+
+// Start session (placeholder)
+function startSession(sessionId) {
+  // This would typically redirect to a session interface
+  alert('Session starting functionality would be implemented here');
+}
+
+// View session details (placeholder)
+function viewSessionDetails(sessionId) {
+  // This would show detailed session information
+  alert('Session details functionality would be implemented here');
+}
+</script>
+{% endblock %}

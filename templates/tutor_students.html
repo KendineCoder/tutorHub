@@ -1,0 +1,748 @@
+{% extends "base.html" %} {% block title %}My Students - Learning Hub{% endblock
+%} {% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-2">
+      <div class="sidebar p-3">
+        <h5 class="mb-4">
+          <i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal
+        </h5>
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.dashboard') }}">
+              <i class="fas fa-tachometer-alt me-2"></i>Overview
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link active"
+              href="{{ url_for('tutor.my_students') }}"
+            >
+              <i class="fas fa-users me-2"></i>My Students
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.sessions') }}">
+              <i class="fas fa-calendar me-2"></i>Sessions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.availability') }}">
+              <i class="fas fa-clock me-2"></i>Availability
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-10">
+      <div class="main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2><i class="fas fa-users me-2"></i>My Students</h2>
+            <p class="text-muted">
+              Detailed overview of students you've taught with progress metrics
+            </p>
+          </div>
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-outline-primary"
+              onclick="filterStudents('all')"
+            >
+              <i class="fas fa-filter me-2"></i>All Students
+            </button>
+            <button
+              class="btn btn-outline-success"
+              onclick="filterStudents('active')"
+            >
+              <i class="fas fa-user-check me-2"></i>Active Students
+            </button>
+          </div>
+        </div>
+
+        <!-- Students Stats Summary -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h4 class="mb-0">{{ students|length }}</h4>
+                <small class="text-muted">Total Students</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                <h4 class="mb-0">
+                  {{ students|sum(attribute='completed_sessions') }}
+                </h4>
+                <small class="text-muted">Total Sessions</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                <h4 class="mb-0">
+                  {% set ratings = students|selectattr('avg_rating')|list %} {%
+                  if ratings %} {{
+                  "%.1f"|format(ratings|sum(attribute='avg_rating')/ratings|length)
+                  }}★ {% else %} N/A {% endif %}
+                </h4>
+                <small class="text-muted">Avg Rating</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card dashboard-card text-center">
+              <div class="card-body">
+                <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                <h4 class="mb-0">
+                  {% if students %} {{
+                  "%.1f"|format(students|sum(attribute='avg_progress')/students|length)
+                  }}% {% else %} 0% {% endif %}
+                </h4>
+                <small class="text-muted">Avg Progress</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Students Grid -->
+        {% if students %}
+        <div class="row" id="studentsContainer">
+          {% for student in students %}
+          <div
+            class="col-md-6 mb-4 student-card"
+            data-student-status="{{ 'active' if student.upcoming_sessions > 0 else 'inactive' }}"
+          >
+            <div class="card dashboard-card h-100">
+              <div class="card-body">
+                <!-- Student Header -->
+                <div
+                  class="d-flex justify-content-between align-items-start mb-3"
+                >
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-3">
+                      <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-0">{{ student.username }}</h6>
+                      <small class="text-muted">{{ student.email }}</small>
+                    </div>
+                  </div>
+                  <div class="text-end">
+                    {% if student.upcoming_sessions > 0 %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Progress Ring -->
+                <div class="text-center mb-3">
+                  <div
+                    class="progress-ring"
+                    data-progress="{{ student.avg_progress }}"
+                  >
+                    <svg class="progress-ring-svg" width="80" height="80">
+                      <circle
+                        class="progress-ring-circle-bg"
+                        stroke="#e9ecef"
+                        stroke-width="6"
+                        fill="transparent"
+                        r="35"
+                        cx="40"
+                        cy="40"
+                      />
+                      <circle
+                        class="progress-ring-circle"
+                        stroke="#28a745"
+                        stroke-width="6"
+                        fill="transparent"
+                        r="35"
+                        cx="40"
+                        cy="40"
+                        style="stroke-dasharray: {{ 2 * 3.14159 * 35 }}; stroke-dashoffset: {{ 2 * 3.14159 * 35 * (1 - student.avg_progress / 100) }};"
+                      />
+                    </svg>
+                    <div class="progress-ring-text">
+                      <strong>{{ student.avg_progress }}%</strong>
+                      <small>Progress</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Student Metrics -->
+                <div class="row text-center mb-3">
+                  <div class="col-4">
+                    <div class="metric-box">
+                      <h6 class="text-primary mb-0">
+                        {{ student.total_sessions }}
+                      </h6>
+                      <small class="text-muted">Sessions</small>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="metric-box">
+                      <h6 class="text-success mb-0">
+                        {{ student.courses_taught }}
+                      </h6>
+                      <small class="text-muted">Courses</small>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="metric-box">
+                      <h6 class="text-warning mb-0">
+                        {% if student.avg_rating %} {{ student.avg_rating }}★ {%
+                        else %} N/A {% endif %}
+                      </h6>
+                      <small class="text-muted">Rating</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Session Breakdown -->
+                <div class="mb-3">
+                  <small class="text-muted d-block mb-2"
+                    >Session Breakdown:</small
+                  >
+                  <div class="d-flex justify-content-between">
+                    <span class="badge bg-success"
+                      >{{ student.completed_sessions }} Completed</span
+                    >
+                    <span class="badge bg-primary"
+                      >{{ student.upcoming_sessions }} Upcoming</span
+                    >
+                    <span class="badge bg-danger"
+                      >{{ student.cancelled_sessions }} Cancelled</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Timeline Info -->
+                <div class="mb-3">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>First session: {{
+                    student.first_session_date }} {% if
+                    student.last_session_date %} <br /><i
+                      class="fas fa-clock me-1"
+                    ></i
+                    >Last session: {{ student.last_session_date }} {% endif %}
+                  </small>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                  <button
+                    class="btn btn-primary btn-sm"
+                    onclick="viewStudentProgress({{ student.id }})"
+                  >
+                    <i class="fas fa-chart-line me-1"></i>View Progress
+                  </button>
+                  <div class="row">
+                    <div class="col-6">
+                      <button
+                        class="btn btn-outline-success btn-sm w-100"
+                        onclick="scheduleSession({{ student.id }}, '{{ student.username }}')"
+                      >
+                        <i class="fas fa-calendar-plus me-1"></i>Schedule
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-outline-info btn-sm w-100">
+                        <i class="fas fa-comments me-1"></i>Message
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+          <i class="fas fa-users me-2"></i>
+          No students found. Start tutoring to see students here!
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Student Progress Modal (reused from dashboard) -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-chart-line me-2"></i>Student Progress
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="progressContent">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading student progress...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Session Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-calendar-plus me-2"></i>Schedule Session
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="scheduleForm">
+          <input type="hidden" id="studentId" name="student_id" />
+
+          <div class="mb-3">
+            <label for="studentName" class="form-label">Student</label>
+            <input type="text" class="form-control" id="studentName" readonly />
+          </div>
+
+          <div class="mb-3">
+            <label for="courseSelect" class="form-label"
+              >Course (Optional)</label
+            >
+            <select class="form-select" id="courseSelect" name="course_id">
+              <option value="">
+                Select a course (or leave blank for general tutoring)
+              </option>
+            </select>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="sessionDate" class="form-label">Date</label>
+                <input
+                  type="date"
+                  class="form-control"
+                  id="sessionDate"
+                  name="scheduled_date"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="sessionTime" class="form-label">Time</label>
+                <input
+                  type="time"
+                  class="form-control"
+                  id="sessionTime"
+                  name="scheduled_time"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="duration" class="form-label">Duration (minutes)</label>
+            <select class="form-select" id="duration" name="duration" required>
+              <option value="30">30 minutes</option>
+              <option value="60" selected>1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="120">2 hours</option>
+            </select>
+          </div>
+
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Make sure you're available at the selected time. Check your
+            availability settings if needed.
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-success"
+          onclick="submitScheduleSession()"
+        >
+          <i class="fas fa-calendar-plus me-1"></i>Schedule Session
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+  }
+
+  .progress-ring {
+    position: relative;
+    display: inline-block;
+  }
+
+  .progress-ring-svg {
+    transform: rotate(-90deg);
+  }
+
+  .progress-ring-circle {
+    transition: stroke-dashoffset 0.5s ease-in-out;
+  }
+
+  .progress-ring-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .metric-box {
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .student-card {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .student-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .dashboard-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+  }
+</style>
+
+<script>
+  // Filter students by status
+  function filterStudents(status) {
+    const cards = document.querySelectorAll(".student-card");
+    const buttons = document.querySelectorAll('[onclick^="filterStudents"]');
+
+    // Update active button
+    buttons.forEach((btn) => btn.classList.remove("btn-primary"));
+    buttons.forEach((btn) => btn.classList.add("btn-outline-primary"));
+    event.target.classList.remove("btn-outline-primary");
+    event.target.classList.add("btn-primary");
+
+    // Filter cards
+    cards.forEach((card) => {
+      if (status === "all" || card.dataset.studentStatus === status) {
+        card.style.display = "block";
+      } else {
+        card.style.display = "none";
+      }
+    });
+  }
+
+  // View student progress (reused from dashboard)
+  function viewStudentProgress(studentId) {
+    const modal = new bootstrap.Modal(document.getElementById("progressModal"));
+    modal.show();
+
+    // Reset content to loading
+    document.getElementById("progressContent").innerHTML = `
+    <div class="text-center">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Loading student progress...</p>
+    </div>
+  `;
+
+    // Fetch student progress data
+    fetch(`/tutor/api/student-progress/${studentId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          document.getElementById("progressContent").innerHTML = `
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${data.error}
+          </div>
+        `;
+          return;
+        }
+
+        let progressHTML = `
+        <div class="mb-4">
+          <h6><i class="fas fa-user me-2"></i>Student: ${data.student.username}</h6>
+          <p class="text-muted mb-3">${data.student.email}</p>
+        </div>
+      `;
+
+        if (data.courses.length === 0) {
+          progressHTML += `
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No course progress found for courses you've taught this student.
+          </div>
+        `;
+        } else {
+          progressHTML += `<h6 class="mb-3"><i class="fas fa-book me-2"></i>Course Progress (Courses You've Taught):</h6>`;
+
+          data.courses.forEach((course) => {
+            const progressColor =
+              course.progress >= 80
+                ? "success"
+                : course.progress >= 50
+                ? "warning"
+                : "danger";
+            const statusBadge =
+              course.status === "completed" ? "bg-success" : "bg-primary";
+
+            progressHTML += `
+            <div class="card mb-3">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="card-title mb-0">${course.title}</h6>
+                  <div>
+                    <span class="badge ${statusBadge}">${
+              course.status.charAt(0).toUpperCase() + course.status.slice(1)
+            }</span>
+                    <span class="badge bg-secondary ms-2">${
+                      course.sessions_with_tutor
+                    } sessions</span>
+                  </div>
+                </div>
+                <p class="card-text text-muted mb-3">${course.description}</p>
+                
+                <div class="row mb-3">
+                  <div class="col-md-8">
+                    <div class="progress mb-2" style="height: 10px;">
+                      <div class="progress-bar bg-${progressColor}" role="progressbar"
+                           style="width: ${course.progress}%"
+                           aria-valuenow="${course.progress}"
+                           aria-valuemin="0" aria-valuemax="100">
+                      </div>
+                    </div>
+                    <small class="text-muted">
+                      ${course.completed_lessons} of ${
+              course.total_lessons
+            } lessons completed (${course.progress}%)
+                    </small>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <small class="text-muted">
+                      <i class="fas fa-calendar me-1"></i>Enrolled: ${
+                        course.enrolled_date
+                      }
+                      ${
+                        course.last_activity
+                          ? `<br><i class="fas fa-clock me-1"></i>Last activity: ${new Date(
+                              course.last_activity
+                            ).toLocaleDateString()}`
+                          : ""
+                      }
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          });
+        }
+
+        // Add sessions history
+        if (data.sessions_history.length > 0) {
+          progressHTML += `
+          <h6 class="mb-3 mt-4"><i class="fas fa-history me-2"></i>Recent Sessions:</h6>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Course</th>
+                  <th>Status</th>
+                  <th>Rating</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+          data.sessions_history.slice(0, 5).forEach((session) => {
+            const statusColor =
+              session.status === "completed"
+                ? "success"
+                : session.status === "cancelled"
+                ? "danger"
+                : "warning";
+            const rating = session.rating
+              ? "★".repeat(session.rating) + "☆".repeat(5 - session.rating)
+              : "Not rated";
+
+            progressHTML += `
+            <tr>
+              <td>${session.scheduled_date} ${session.scheduled_time}</td>
+              <td>${session.course_title || "General Tutoring"}</td>
+              <td><span class="badge bg-${statusColor}">${
+              session.status
+            }</span></td>
+              <td>${rating}</td>
+            </tr>
+          `;
+          });
+
+          progressHTML += `
+              </tbody>
+            </table>
+          </div>
+        `;
+        }
+
+        document.getElementById("progressContent").innerHTML = progressHTML;
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("progressContent").innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Error loading student progress. Please try again.
+        </div>
+      `;
+      });
+  }
+
+  // Schedule session functionality
+  function scheduleSession(studentId, studentName) {
+    // Set student info
+    document.getElementById("studentId").value = studentId;
+    document.getElementById("studentName").value = studentName;
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("sessionDate").min = today;
+    document.getElementById("sessionDate").value = today;
+
+    // Load available courses
+    loadAvailableCourses();
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById("scheduleModal"));
+    modal.show();
+  }
+
+  function loadAvailableCourses() {
+    fetch("/tutor/api/courses/available")
+      .then((response) => response.json())
+      .then((data) => {
+        const courseSelect = document.getElementById("courseSelect");
+        courseSelect.innerHTML =
+          '<option value="">Select a course (or leave blank for general tutoring)</option>';
+
+        if (data.courses && data.courses.length > 0) {
+          data.courses.forEach((course) => {
+            const option = document.createElement("option");
+            option.value = course.id;
+            option.textContent = `${course.title} (${course.difficulty_level})`;
+            courseSelect.appendChild(option);
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading courses:", error);
+      });
+  }
+
+  function submitScheduleSession() {
+    const form = document.getElementById("scheduleForm");
+    const formData = new FormData(form);
+
+    // Convert form data to JSON
+    const sessionData = {
+      student_id: parseInt(formData.get("student_id")),
+      course_id: formData.get("course_id")
+        ? parseInt(formData.get("course_id"))
+        : null,
+      scheduled_date: formData.get("scheduled_date"),
+      scheduled_time: formData.get("scheduled_time"),
+      duration: parseInt(formData.get("duration")),
+    };
+
+    // Validate required fields
+    if (
+      !sessionData.student_id ||
+      !sessionData.scheduled_date ||
+      !sessionData.scheduled_time ||
+      !sessionData.duration
+    ) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    // Submit the session
+    fetch("/tutor/api/sessions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(sessionData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          // Close modal
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("scheduleModal")
+          );
+          modal.hide();
+
+          // Show success message
+          alert("Session scheduled successfully!");
+
+          // Optionally refresh the page or update the UI
+          window.location.reload();
+        } else {
+          alert("Error: " + (data.error || "Failed to schedule session"));
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error scheduling session. Please try again.");
+      });
+  }
+</script>
+{% endblock %}
