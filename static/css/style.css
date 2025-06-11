@@ -47,6 +47,89 @@ body {
   color: #6c757d !important;
 }
 
+/* Color background with white text - HIGH PRIORITY FIXES */
+.bg-primary,
+.bg-primary.text-white,
+.bg-success,
+.bg-success.text-white,
+.bg-warning,
+.bg-warning.text-white,
+.bg-danger,
+.bg-danger.text-white,
+.bg-info,
+.bg-info.text-white,
+.bg-secondary,
+.bg-secondary.text-white {
+  color: white !important;
+}
+
+.bg-primary *,
+.bg-success *,
+.bg-warning *,
+.bg-danger *,
+.bg-info *,
+.bg-secondary * {
+  color: white !important;
+}
+
+/* Specific fixes for card headers with colored backgrounds */
+.card-header.bg-primary,
+.card-header.bg-primary *,
+.card-header.bg-success,
+.card-header.bg-success *,
+.card-header.bg-warning,
+.card-header.bg-warning *,
+.card-header.bg-danger,
+.card-header.bg-danger *,
+.card-header.bg-info,
+.card-header.bg-info *,
+.card-header.bg-secondary,
+.card-header.bg-secondary * {
+  color: white !important;
+}
+
+/* Modal headers with colored backgrounds */
+.modal-header.bg-primary,
+.modal-header.bg-primary *,
+.modal-header.bg-success,
+.modal-header.bg-success *,
+.modal-header.bg-warning,
+.modal-header.bg-warning *,
+.modal-header.bg-danger,
+.modal-header.bg-danger *,
+.modal-header.bg-info,
+.modal-header.bg-info *,
+.modal-header.bg-secondary,
+.modal-header.bg-secondary * {
+  color: white !important;
+}
+
+/* Badge text readability */
+.badge.bg-primary,
+.badge.bg-success,
+.badge.bg-warning,
+.badge.bg-danger,
+.badge.bg-info,
+.badge.bg-secondary {
+  color: white !important;
+}
+
+/* Stats cards text visibility */
+.stats-card.bg-primary,
+.stats-card.bg-primary *,
+.stats-card.bg-success,
+.stats-card.bg-success *,
+.stats-card.bg-warning,
+.stats-card.bg-warning *,
+.stats-card.bg-danger,
+.stats-card.bg-danger *,
+.stats-card.bg-info,
+.stats-card.bg-info *,
+.stats-card.bg-secondary,
+.stats-card.bg-secondary * {
+  color: white !important;
+}
+
 /* Ensure button text is always visible */
 .btn {
   color: white;
@@ -200,8 +283,8 @@ body {
 
 /* Stats Cards */
 .stats-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
   border-radius: 15px;
   padding: 1.5rem;
   text-align: center;
@@ -216,6 +299,7 @@ body {
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
+  color: white !important;
 }
 
 .stats-card p {
@@ -223,6 +307,62 @@ body {
   opacity: 0.9;
   text-transform: uppercase;
   letter-spacing: 1px;
+  color: white !important;
+}
+
+/* Force ALL text inside stats cards to be white */
+.stats-card,
+.stats-card *,
+.stats-card h1,
+.stats-card h2,
+.stats-card h3,
+.stats-card h4,
+.stats-card h5,
+.stats-card h6,
+.stats-card p,
+.stats-card span,
+.stats-card div,
+.stats-card small {
+  color: white !important;
+}
+
+/* Stats cards with Bootstrap background colors - FORCE WHITE TEXT */
+.stats-card.bg-primary,
+.stats-card.bg-primary *,
+.stats-card.bg-success,
+.stats-card.bg-success *,
+.stats-card.bg-warning,
+.stats-card.bg-warning *,
+.stats-card.bg-danger,
+.stats-card.bg-danger *,
+.stats-card.bg-info,
+.stats-card.bg-info *,
+.stats-card.bg-secondary,
+.stats-card.bg-secondary * {
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Ensure stats card headings are always white */
+.stats-card.bg-primary h4,
+.stats-card.bg-success h4,
+.stats-card.bg-warning h4,
+.stats-card.bg-danger h4,
+.stats-card.bg-info h4,
+.stats-card.bg-secondary h4 {
+  color: white !important;
+  font-weight: 700 !important;
+}
+
+/* Ensure stats card paragraphs are always white */
+.stats-card.bg-primary p,
+.stats-card.bg-success p,
+.stats-card.bg-warning p,
+.stats-card.bg-danger p,
+.stats-card.bg-info p,
+.stats-card.bg-secondary p {
+  color: white !important;
+  opacity: 0.95 !important;
 }
 
 /* Course Cards */
@@ -394,75 +534,120 @@ body {
   background-color: inherit !important;
 }
 
-/* Alerts */
+/* Table text readability */
+.table {
+  color: #212529 !important;
+}
+
+.table th,
+.table td {
+  color: #212529 !important;
+}
+
+.table thead th {
+  color: #495057 !important;
+  background-color: #f8f9fa !important;
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+}
+
+.table tbody tr:hover td {
+  color: #212529 !important;
+}
+
+/* Progress bar text readability */
+.progress-bar {
+  color: white !important;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.progress-bar.bg-primary,
+.progress-bar.bg-success,
+.progress-bar.bg-warning,
+.progress-bar.bg-danger,
+.progress-bar.bg-info {
+  color: white !important;
+}
+
+/* Form text readability */
+.form-label {
+  color: #212529 !important;
+  font-weight: 600;
+}
+
+.form-control {
+  color: #495057 !important;
+}
+
+.form-text {
+  color: #6c757d !important;
+}
+
+/* Alert text readability */
 .alert {
-  border: none;
-  border-radius: 10px;
-  padding: 1rem 1.5rem;
-  margin-bottom: 1rem;
-  border-left: 4px solid;
-  background-color: white !important;
+  color: #212529 !important;
 }
 
 .alert-success {
-  border-left-color: var(--success-color);
   color: #155724 !important;
-  background-color: #f8fff9 !important;
-}
-
-.alert-info {
-  border-left-color: var(--info-color);
-  color: #0c5460 !important;
-  background-color: #f8fdff !important;
-}
-
-.alert-warning {
-  border-left-color: var(--warning-color);
-  color: #856404 !important;
-  background-color: #fffef8 !important;
+  background-color: #d4edda !important;
+  border-color: #c3e6cb !important;
 }
 
 .alert-danger {
-  border-left-color: var(--danger-color);
   color: #721c24 !important;
-  background-color: #fff8f8 !important;
+  background-color: #f8d7da !important;
+  border-color: #f5c6cb !important;
 }
 
-/* Form Controls */
-.form-control,
-.form-select {
-  border-radius: 8px;
-  border: 2px solid #e9ecef;
-  padding: 0.75rem 1rem;
-  transition: all 0.3s ease;
-  color: #495057 !important; /* Dark text for form inputs */
-  background-color: white !important;
+.alert-warning {
+  color: #856404 !important;
+  background-color: #fff3cd !important;
+  border-color: #ffeaa7 !important;
 }
 
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+.alert-info {
+  color: #0c5460 !important;
+  background-color: #d1ecf1 !important;
+  border-color: #bee5eb !important;
+}
+
+/* Dropdown menu text readability */
+.dropdown-menu {
   color: #212529 !important;
-  background-color: white !important;
 }
 
-.form-control:hover,
-.form-select:hover {
-  background-color: #f8f9fa !important; /* Light background on hover */
-  color: #212529 !important; /* Keep text dark on hover */
+.dropdown-item {
+  color: #212529 !important;
 }
 
-.form-label {
-  color: #495057 !important; /* Dark text for form labels */
-  font-weight: 500;
+.dropdown-item:hover {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
 }
 
-.input-group-text {
-  border-radius: 8px 0 0 8px;
-  border: 2px solid #e9ecef;
-  border-right: none;
-  background-color: white !important;
+/* Role badge specific readability */
+.role-badge {
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Lesson cards and content readability */
+.lesson-card {
+  background: white !important;
+  color: #212529 !important;
+}
+
+.lesson-card .card-title {
+  color: #212529 !important;
+}
+
+.lesson-card .card-text {
   color: #495057 !important;
 }
 
@@ -759,4 +944,41 @@ body {
 .nav-tabs .nav-link.active {
   background-color: white !important;
   color: #212529 !important;
+}
+
+/* Universal fix for any colored background with text-white class */
+.bg-primary.text-white,
+.bg-primary.text-white *,
+.bg-success.text-white,
+.bg-success.text-white *,
+.bg-warning.text-white,
+.bg-warning.text-white *,
+.bg-danger.text-white,
+.bg-danger.text-white *,
+.bg-info.text-white,
+.bg-info.text-white *,
+.bg-secondary.text-white,
+.bg-secondary.text-white *,
+.bg-dark.text-white,
+.bg-dark.text-white * {
+  color: white !important;
+}
+
+/* Ensure any element with colored background shows white text */
+[class*="bg-primary"],
+[class*="bg-success"],
+[class*="bg-warning"],
+[class*="bg-danger"],
+[class*="bg-info"],
+[class*="bg-secondary"] {
+  color: white !important;
+}
+
+[class*="bg-primary"] *,
+[class*="bg-success"] *,
+[class*="bg-warning"] *,
+[class*="bg-danger"] *,
+[class*="bg-info"] *,
+[class*="bg-secondary"] * {
+  color: inherit !important;
 }

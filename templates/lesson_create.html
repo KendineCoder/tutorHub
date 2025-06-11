@@ -5,10 +5,12 @@ endblock %} {% block content %}
     <div class="col-md-10">
       <div class="card dashboard-card">
         <div class="card-header bg-success text-white">
-          <h4 class="mb-0">
+          <h4 class="mb-0 text-white">
             <i class="fas fa-plus-circle me-2"></i>Add New Lesson
           </h4>
-          <p class="mb-0 mt-2">Course: <strong>{{ course.title }}</strong></p>
+          <p class="mb-0 mt-2 text-white">
+            Course: <strong class="text-white">{{ course.title }}</strong>
+          </p>
         </div>
         <div class="card-body">
           <form id="lessonForm">
