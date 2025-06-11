@@ -67,6 +67,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     duration INTEGER DEFAULT 60, -- in minutes
     status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled', 'rescheduled')),
     notes TEXT,
+    completed_at TIMESTAMP DEFAULT NULL,
+    reschedule_reason TEXT DEFAULT NULL,
+    rescheduled_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (tutor_id) REFERENCES users (id) ON DELETE CASCADE,

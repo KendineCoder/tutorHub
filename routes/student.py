@@ -153,16 +153,17 @@ def sessions():
             AND s.scheduled_date >= date('now')
             ORDER BY s.scheduled_date ASC, s.scheduled_time ASC
         ''', (session['user_id'],)).fetchall()
-        
-        # Get completed/cancelled sessions for history
+          # Get completed/cancelled sessions for history
         completed_sessions = conn.execute('''
-            SELECT s.*, u.username as tutor_name, u.email as tutor_email, c.title as course_title
+            SELECT s.*, u.username as tutor_name, u.email as tutor_email, c.title as course_title,
+                   r.rating, r.review_text
             FROM sessions s
             JOIN users u ON s.tutor_id = u.id
             LEFT JOIN courses c ON s.course_id = c.id
+            LEFT JOIN reviews r ON s.id = r.session_id AND r.student_id = ?
             WHERE s.student_id = ? AND s.status IN ('completed', 'cancelled')
             ORDER BY s.scheduled_date DESC LIMIT 20
-        ''', (session['user_id'],)).fetchall()
+        ''', (session['user_id'], session['user_id'])).fetchall()
         
         # Get available courses for session creation
         available_courses = conn.execute('''
@@ -332,6 +333,43 @@ def api_join_session(session_id):
         conn.commit()
         flash('Successfully joined the session! Session is now in progress.', 'success')
         return redirect(url_for('student.dashboard'))
+    finally:
+        conn.close()
+
+@student_bp.route('/api/end_session/<int:session_id>', methods=['POST'])
+@login_required
+@role_required('student')
+def api_end_session(session_id):
+    """API endpoint to end a session and mark it as completed"""
+    conn = get_db_connection()
+    try:
+        # Verify the session belongs to this student and is in progress
+        session_data = conn.execute('''
+            SELECT id, status FROM sessions 
+            WHERE id = ? AND student_id = ? AND status = 'in_progress'
+        ''', (session_id, session['user_id'])).fetchone()
+        
+        if not session_data:
+            return jsonify({'error': 'Session not found or not in progress'}), 404
+        
+        # Update session status to 'completed' and set end time
+        conn.execute('''
+            UPDATE sessions 
+            SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND student_id = ?
+        ''', (session_id, session['user_id']))
+        
+        conn.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Session ended successfully'
+        })
+        
+    except sqlite3.Error as e:
+        return jsonify({'error': 'Database error occurred'}), 500
+    except Exception as e:
+        return jsonify({'error': 'An unexpected error occurred'}), 500
     finally:
         conn.close()
 
@@ -641,21 +679,6 @@ def get_tutors_for_course(course_id):
                 sessions_count DESC, 
                 u.username
         ''', (course_id, course_id, course_id)).fetchall()
-          # If no specific tutors for the course, get all available tutors
-        if not tutors:
-            tutors = conn.execute('''
-                SELECT u.id, u.username, u.email, 0 as sessions_count, 
-                       NULL as avg_rating, 
-                       COALESCE(GROUP_CONCAT(DISTINCT c.title), ?) as subjects
-                FROM users u
-                LEFT JOIN sessions s ON u.id = s.tutor_id
-                LEFT JOIN courses c ON s.course_id = c.id
-                WHERE u.role = 'tutor' AND u.id IN (
-                    SELECT DISTINCT tutor_id FROM tutor_availability WHERE is_available = 1
-                )
-                GROUP BY u.id, u.username, u.email
-                ORDER BY u.username
-            ''', (course_title,)).fetchall()
         tutors_list = []
         for tutor in tutors:
             tutor_dict = dict(tutor)
@@ -824,14 +847,9 @@ def get_session_details(session_id):
         if not session_details:
             return jsonify({'error': 'Session not found'}), 404
         
-        # Get session notes if available
-        notes = conn.execute('''
-            SELECT content, created_at FROM session_notes 
-            WHERE session_id = ? ORDER BY created_at DESC
-        ''', (session_id,)).fetchall()
-        
         session_dict = dict(session_details)
-        session_dict['notes'] = [dict(note) for note in notes]
+        # For now, set notes as empty array since session_notes table doesn't exist
+        session_dict['notes'] = []
         
         return jsonify({'session': session_dict})
         
@@ -935,5 +953,247 @@ def api_cancel_session(session_id):
     except Exception as e:
         print(f"Unexpected error in cancel_session: {e}")  # Debug log
         return jsonify({'error': 'An unexpected error occurred'}), 500
+    finally:
+        conn.close()
+
+@student_bp.route('/api/reschedule-session/<int:session_id>', methods=['POST'])
+@login_required
+@role_required('student')
+def reschedule_session(session_id):
+    """Reschedule a session (student version)"""
+    try:
+        data = request.get_json()
+        new_date = data.get('date')
+        new_time = data.get('time')
+        reason = data.get('reason', 'Rescheduled by student')
+        
+        if not new_date or not new_time:
+            return jsonify({'error': 'Date and time are required'}), 400
+        
+        conn = get_db_connection()
+        try:
+            # Check if session exists and belongs to student
+            session_data = conn.execute('''
+                SELECT s.*, u.username as tutor_name
+                FROM sessions s
+                JOIN users u ON s.tutor_id = u.id
+                WHERE s.id = ? AND s.student_id = ?
+            ''', (session_id, session['user_id'])).fetchone()
+            
+            if not session_data:
+                return jsonify({'error': 'Session not found'}), 404
+            
+            # Check if session can be rescheduled (must be scheduled or already rescheduled)
+            if session_data['status'] not in ['scheduled', 'rescheduled']:
+                return jsonify({'error': 'Can only reschedule scheduled sessions'}), 400
+            
+            # Check if new time slot is available
+            existing_session = conn.execute('''
+                SELECT id FROM sessions 
+                WHERE tutor_id = ? AND scheduled_date = ? AND scheduled_time = ?
+                AND status IN ('scheduled', 'rescheduled', 'in_progress') AND id != ?
+            ''', (session_data['tutor_id'], new_date, new_time, session_id)).fetchone()
+            
+            if existing_session:
+                return jsonify({'error': 'The requested time slot is already booked'}), 400
+            
+            # Update the session
+            conn.execute('''
+                UPDATE sessions 
+                SET scheduled_date = ?, scheduled_time = ?, status = 'rescheduled', 
+                    reschedule_reason = ?, rescheduled_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (new_date, new_time, reason, session_id))
+            
+            # Add notification for tutor (optional, if notifications table exists)
+            try:
+                conn.execute('''
+                    INSERT INTO notifications (user_id, type, message, created_at)
+                    VALUES (?, 'session_rescheduled', ?, CURRENT_TIMESTAMP)
+                ''', (session_data['tutor_id'], 
+                      f'Your session has been rescheduled by student to {new_date} at {new_time}'))
+            except:
+                pass  # Notifications table might not exist
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Session rescheduled successfully'
+            })
+            
+        except sqlite3.Error as e:
+            conn.rollback()
+            return jsonify({'error': 'Database error occurred'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': 'Failed to reschedule session: ' + str(e)}), 500
+    finally:
+        conn.close()
+
+# ========== COURSE PROGRESS API ENDPOINTS ==========
+
+@student_bp.route('/api/progress/update', methods=['POST'])
+@login_required
+@role_required('student')
+def update_lesson_progress():
+    """Update lesson progress - mark lesson as complete"""
+    try:
+        data = request.get_json()
+        lesson_id = data.get('lesson_id')
+        completed = data.get('completed', 1)
+        
+        if not lesson_id:
+            return jsonify({'status': 'error', 'error': 'Lesson ID is required'}), 400
+        
+        conn = get_db_connection()
+        try:
+            # First, get the course_id for this lesson
+            lesson = conn.execute('''
+                SELECT course_id FROM lessons WHERE id = ?
+            ''', (lesson_id,)).fetchone()
+            
+            if not lesson:
+                return jsonify({'status': 'error', 'error': 'Lesson not found'}), 404
+            
+            course_id = lesson['course_id']
+            
+            # Check if student is enrolled in this course
+            enrollment = conn.execute('''
+                SELECT id FROM enrollments 
+                WHERE student_id = ? AND course_id = ? AND status = 'active'
+            ''', (session['user_id'], course_id)).fetchone()
+            
+            if not enrollment:
+                return jsonify({'status': 'error', 'error': 'Not enrolled in this course'}), 403
+            
+            # Update or insert progress record
+            conn.execute('''
+                INSERT OR REPLACE INTO progress 
+                (user_id, course_id, lesson_id, completed, progress, updated_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (session['user_id'], course_id, lesson_id, completed, 100 if completed else 0))
+            
+            conn.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Progress updated successfully'
+            })
+            
+        except sqlite3.Error as e:
+            conn.rollback()
+            print(f"Database error in update_lesson_progress: {e}")
+            return jsonify({'status': 'error', 'error': 'Database error occurred'}), 500
+            
+    except Exception as e:
+        print(f"Error in update_lesson_progress: {e}")
+        return jsonify({'status': 'error', 'error': 'Failed to update progress'}), 500
+    finally:
+        conn.close()
+
+@student_bp.route('/api/courses/<int:course_id>/progress', methods=['GET'])
+@login_required
+@role_required('student')
+def get_course_progress(course_id):
+    """Get current progress for a specific course"""
+    try:
+        conn = get_db_connection()
+        try:
+            # Check if student is enrolled
+            enrollment = conn.execute('''
+                SELECT id FROM enrollments 
+                WHERE student_id = ? AND course_id = ? AND status = 'active'
+            ''', (session['user_id'], course_id)).fetchone()
+            
+            if not enrollment:
+                return jsonify({'status': 'error', 'error': 'Not enrolled in this course'}), 403
+            
+            # Calculate progress
+            progress_data = conn.execute('''
+                SELECT 
+                    COUNT(DISTINCT l.id) as total_lessons,
+                    COUNT(DISTINCT CASE WHEN p.completed = 1 THEN p.lesson_id END) as completed_lessons
+                FROM lessons l
+                LEFT JOIN progress p ON l.id = p.lesson_id AND p.user_id = ?
+                WHERE l.course_id = ?
+            ''', (session['user_id'], course_id)).fetchone()
+            
+            total_lessons = progress_data['total_lessons'] or 0
+            completed_lessons = progress_data['completed_lessons'] or 0
+            progress_percent = round((completed_lessons / total_lessons) * 100, 1) if total_lessons > 0 else 0
+            
+            return jsonify({
+                'status': 'success',
+                'progress': progress_percent,
+                'completed_lessons': completed_lessons,
+                'total_lessons': total_lessons
+            })
+            
+        except sqlite3.Error as e:
+            print(f"Database error in get_course_progress: {e}")
+            return jsonify({'status': 'error', 'error': 'Database error occurred'}), 500
+            
+    except Exception as e:
+        print(f"Error in get_course_progress: {e}")
+        return jsonify({'status': 'error', 'error': 'Failed to get progress'}), 500
+    finally:
+        conn.close()
+
+@student_bp.route('/api/courses/<int:course_id>/complete', methods=['POST'])
+@login_required
+@role_required('student')
+def complete_course(course_id):
+    """Mark entire course as complete"""
+    try:
+        conn = get_db_connection()
+        try:
+            # Check if student is enrolled
+            enrollment = conn.execute('''
+                SELECT id FROM enrollments 
+                WHERE student_id = ? AND course_id = ? AND status = 'active'
+            ''', (session['user_id'], course_id)).fetchone()
+            
+            if not enrollment:
+                return jsonify({'status': 'error', 'error': 'Not enrolled in this course'}), 403
+            
+            # Get all lessons for this course
+            lessons = conn.execute('''
+                SELECT id FROM lessons WHERE course_id = ?
+            ''', (course_id,)).fetchall()
+            
+            if not lessons:
+                return jsonify({'status': 'error', 'error': 'No lessons found for this course'}), 404
+            
+            # Mark all lessons as complete
+            for lesson in lessons:
+                conn.execute('''
+                    INSERT OR REPLACE INTO progress 
+                    (user_id, course_id, lesson_id, completed, progress, updated_at)
+                    VALUES (?, ?, ?, 1, 100, CURRENT_TIMESTAMP)
+                ''', (session['user_id'], course_id, lesson['id']))
+            
+            # Update enrollment status
+            conn.execute('''
+                UPDATE enrollments 
+                SET status = 'completed', completion_date = CURRENT_TIMESTAMP
+                WHERE student_id = ? AND course_id = ?
+            ''', (session['user_id'], course_id))
+            
+            conn.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Course marked as complete! Congratulations!'
+            })
+            
+        except sqlite3.Error as e:
+            conn.rollback()
+            print(f"Database error in complete_course: {e}")
+            return jsonify({'status': 'error', 'error': 'Database error occurred'}), 500
+            
+    except Exception as e:
+        print(f"Error in complete_course: {e}")
+        return jsonify({'status': 'error', 'error': 'Failed to complete course'}), 500
     finally:
         conn.close()

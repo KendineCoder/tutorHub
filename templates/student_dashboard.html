@@ -108,8 +108,11 @@ endblock %} {% block content %}
             </p>
             <small>Started: {{ current_session.scheduled_time }}</small>
           </div>
-          <button class="btn btn-warning" disabled>
-            <i class="fas fa-video me-1"></i>In Session
+          <button
+            class="btn btn-danger"
+            onclick="endSession({{ current_session.id }})"
+          >
+            <i class="fas fa-stop me-1"></i>End Session
           </button>
         </div>
         {% elif next_session %}
@@ -183,7 +186,10 @@ endblock %} {% block content %}
                       >{{ course.progress }}% Complete</small
                     >
                     <br />
-                    <a href="#" class="btn btn-primary btn-sm mt-2">
+                    <a
+                      href="{{ url_for('student.my_courses') }}"
+                      class="btn btn-primary btn-sm mt-2"
+                    >
                       <i class="fas fa-play me-1"></i>Continue
                     </a>
                   </div>
@@ -312,4 +318,5 @@ endblock %} {% block content %}
 
 <!-- Include session scheduling functionality -->
 <script src="{{ url_for('static', filename='js/session-scheduler.js') }}"></script>
+<script src="{{ url_for('static', filename='js/student-dashboard.js') }}"></script>
 {% endblock %}
