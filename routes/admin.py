@@ -70,6 +70,148 @@ def user_management():
         conn.close()
 
 
+@admin_bp.route('/courses')
+@login_required
+@role_required('admin')
+def courses():
+    """Courses management page for admins"""
+    conn = get_db_connection()
+    try:
+        # Get all courses with creator information
+        courses = conn.execute('''
+            SELECT c.id, c.title, c.description, c.difficulty_level, 
+                   c.estimated_duration, c.created_at,
+                   u.username as creator_name, u.email as creator_email
+            FROM courses c
+            LEFT JOIN users u ON c.created_by = u.id
+            ORDER BY c.created_at DESC
+        ''').fetchall()
+        
+        # Get course statistics
+        stats = {
+            'total_courses': len(courses),
+            'beginner_courses': len([c for c in courses if c['difficulty_level'] == 'beginner']),
+            'intermediate_courses': len([c for c in courses if c['difficulty_level'] == 'intermediate']),
+            'advanced_courses': len([c for c in courses if c['difficulty_level'] == 'advanced']),
+        }
+        
+        # Get enrollment counts for each course
+        course_enrollments = {}
+        for course in courses:
+            enrollment_count = conn.execute(
+                'SELECT COUNT(*) as count FROM enrollments WHERE course_id = ?',
+                (course['id'],)
+            ).fetchone()['count']
+            course_enrollments[course['id']] = enrollment_count
+        
+        return render_template('admin_courses.html', 
+                             courses=courses, 
+                             stats=stats,
+                             course_enrollments=course_enrollments)
+        
+    except sqlite3.Error as e:
+        flash('Error loading courses data', 'error')
+        return redirect(url_for('admin.dashboard'))
+    finally:
+        conn.close()
+
+
+@admin_bp.route('/reports')
+@login_required
+@role_required('admin')
+def reports():
+    """Reports page for admins"""
+    conn = get_db_connection()
+    try:
+        # Get session statistics
+        session_stats = {
+            'total_sessions': conn.execute('SELECT COUNT(*) as count FROM sessions').fetchone()['count'],
+            'completed_sessions': conn.execute("SELECT COUNT(*) as count FROM sessions WHERE status = 'completed'").fetchone()['count'],
+            'scheduled_sessions': conn.execute("SELECT COUNT(*) as count FROM sessions WHERE status = 'scheduled'").fetchone()['count'],
+            'cancelled_sessions': conn.execute("SELECT COUNT(*) as count FROM sessions WHERE status = 'cancelled'").fetchone()['count'],
+        }
+        
+        # Calculate completion rate
+        if session_stats['total_sessions'] > 0:
+            session_stats['completion_rate'] = round((session_stats['completed_sessions'] / session_stats['total_sessions']) * 100, 1)
+        else:
+            session_stats['completion_rate'] = 0
+        
+        # Get user activity statistics
+        user_activity = {
+            'total_enrollments': conn.execute('SELECT COUNT(*) as count FROM enrollments').fetchone()['count'],
+            'active_enrollments': conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE status = 'active'").fetchone()['count'],
+            'completed_courses': conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE status = 'completed'").fetchone()['count'],
+            'total_progress_records': conn.execute('SELECT COUNT(*) as count FROM progress').fetchone()['count'],
+        }
+        
+        # Get recent session activity
+        recent_sessions = conn.execute('''
+            SELECT s.id, s.scheduled_date, s.scheduled_time, s.status,
+                   student.username as student_name,
+                   tutor.username as tutor_name,
+                   c.title as course_title
+            FROM sessions s
+            LEFT JOIN users student ON s.student_id = student.id
+            LEFT JOIN users tutor ON s.tutor_id = tutor.id
+            LEFT JOIN courses c ON s.course_id = c.id
+            ORDER BY s.scheduled_date DESC, s.scheduled_time DESC
+            LIMIT 10
+        ''').fetchall()
+        
+        # Get top courses by enrollment
+        top_courses = conn.execute('''
+            SELECT c.title, c.difficulty_level, COUNT(e.id) as enrollment_count,
+                   u.username as creator_name
+            FROM courses c
+            LEFT JOIN enrollments e ON c.id = e.course_id
+            LEFT JOIN users u ON c.created_by = u.id
+            GROUP BY c.id
+            ORDER BY enrollment_count DESC
+            LIMIT 5
+        ''').fetchall()
+          # Get user registration trends (last 30 days)
+        registration_trends = conn.execute('''
+            SELECT DATE(created_at) as date, COUNT(*) as registrations
+            FROM users
+            WHERE created_at >= date('now', '-30 days')
+            GROUP BY DATE(created_at)
+            ORDER BY date DESC
+            LIMIT 30
+        ''').fetchall()
+        
+        # Convert to list of dictionaries for JSON serialization
+        registration_trends = [dict(row) for row in registration_trends]
+        
+        # Get tutoring session trends
+        session_trends = conn.execute('''
+            SELECT DATE(scheduled_date) as date, COUNT(*) as sessions,
+                   SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+            FROM sessions
+            WHERE scheduled_date >= date('now', '-30 days')
+            GROUP BY DATE(scheduled_date)
+            ORDER BY date DESC
+            LIMIT 30
+        ''').fetchall()
+        
+        # Convert to list of dictionaries for JSON serialization
+        session_trends = [dict(row) for row in session_trends]
+        
+        return render_template('admin_reports.html',
+                             session_stats=session_stats,
+                             user_activity=user_activity,
+                             recent_sessions=recent_sessions,
+                             top_courses=top_courses,
+                             registration_trends=registration_trends,
+                             session_trends=session_trends)
+        
+    except sqlite3.Error as e:
+        flash('Error loading reports data', 'error')
+        return redirect(url_for('admin.dashboard'))
+    finally:
+        conn.close()
+
+
 # ========== USER MANAGEMENT API ENDPOINTS ==========
 
 @admin_bp.route('/api/users', methods=['GET'])
@@ -331,7 +473,6 @@ def reset_user_password(user_id):
         # Update password (in production, this should be hashed)
         conn.execute('UPDATE users SET password = ? WHERE id = ?', (new_password, user_id))
         conn.commit()
-        
         return jsonify({
             'status': 'success', 
             'message': f'Password reset for user {user["username"]}',

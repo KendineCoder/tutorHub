@@ -1,0 +1,445 @@
+{% extends "base.html" %} {% block title %}Reports - Learning Hub{% endblock %}
+{% block content %}
+<div class="row">
+  <!-- Sidebar -->
+  <div class="col-md-3">
+    <div class="sidebar p-3">
+      <h5 class="mb-4"><i class="fas fa-user-shield me-2"></i>Admin Portal</h5>
+      <ul class="nav nav-pills flex-column">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+            <i class="fas fa-tachometer-alt me-2"></i>Overview
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.user_management') }}">
+            <i class="fas fa-users me-2"></i>User Management
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.courses') }}">
+            <i class="fas fa-book me-2"></i>Courses
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="{{ url_for('admin.reports') }}">
+            <i class="fas fa-chart-bar me-2"></i>Reports
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="col-md-9">
+    <div class="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Reports & Analytics</h2>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary" onclick="window.print()">
+            <i class="fas fa-print me-1"></i>Print Report
+          </button>
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-primary dropdown-toggle"
+              type="button"
+              data-bs-toggle="dropdown"
+            >
+              <i class="fas fa-download me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="#" onclick="exportReport('pdf')"
+                  >Export as PDF</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" onclick="exportReport('csv')"
+                  >Export as CSV</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Statistics -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ session_stats.total_sessions }}</h4>
+            <p class="mb-0">Total Sessions</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card bg-success text-white">
+            <h4>{{ session_stats.completed_sessions }}</h4>
+            <p class="mb-0">Completed Sessions</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card bg-warning text-white">
+            <h4>{{ session_stats.scheduled_sessions }}</h4>
+            <p class="mb-0">Scheduled Sessions</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card bg-info text-white">
+            <h4>{{ session_stats.completion_rate }}%</h4>
+            <p class="mb-0">Completion Rate</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Activity Statistics -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="stats-card bg-primary text-white">
+            <h4>{{ user_activity.total_enrollments }}</h4>
+            <p class="mb-0">Total Enrollments</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card bg-success text-white">
+            <h4>{{ user_activity.active_enrollments }}</h4>
+            <p class="mb-0">Active Enrollments</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card bg-secondary text-white">
+            <h4>{{ user_activity.completed_courses }}</h4>
+            <p class="mb-0">Completed Courses</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card bg-dark text-white">
+            <h4>{{ user_activity.total_progress_records }}</h4>
+            <p class="mb-0">Progress Records</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Recent Session Activity -->
+        <div class="col-md-6">
+          <div class="card dashboard-card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">Recent Session Activity</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Student</th>
+                      <th>Tutor</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for session in recent_sessions %}
+                    <tr>
+                      <td>
+                        <small>{{ session.scheduled_date }}</small><br />
+                        <small class="text-muted"
+                          >{{ session.scheduled_time }}</small
+                        >
+                      </td>
+                      <td>
+                        <small>{{ session.student_name or 'Unknown' }}</small>
+                      </td>
+                      <td>
+                        <small>{{ session.tutor_name or 'Unknown' }}</small>
+                      </td>
+                      <td>
+                        <span
+                          class="badge bg-{{ 'success' if session.status == 'completed' 
+                                               else 'warning' if session.status == 'scheduled'
+                                               else 'danger' if session.status == 'cancelled'
+                                               else 'secondary' }}"
+                        >
+                          {{ session.status.title() }}
+                        </span>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Courses by Enrollment -->
+        <div class="col-md-6">
+          <div class="card dashboard-card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">Most Popular Courses</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Course</th>
+                      <th>Creator</th>
+                      <th>Enrollments</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for course in top_courses %}
+                    <tr>
+                      <td>
+                        <strong>{{ course.title }}</strong><br />
+                        <span
+                          class="badge bg-{{ 'success' if course.difficulty_level == 'beginner' 
+                                               else 'warning' if course.difficulty_level == 'intermediate'
+                                               else 'danger' }}"
+                        >
+                          {{ course.difficulty_level.title() }}
+                        </span>
+                      </td>
+                      <td>
+                        <small>{{ course.creator_name or 'Unknown' }}</small>
+                      </td>
+                      <td>
+                        <span class="badge bg-primary"
+                          >{{ course.enrollment_count }}</span
+                        >
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="row">
+        <!-- Registration Trends -->
+        <div class="col-md-6">
+          <div class="card dashboard-card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">User Registration Trends (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="registrationChart" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session Trends -->
+        <div class="col-md-6">
+          <div class="card dashboard-card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">Session Activity Trends (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="sessionChart" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <h5 class="mb-0">System Performance Summary</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <h6>Session Success Rate</h6>
+              <div class="progress mb-3">
+                <div
+                  class="progress-bar bg-success"
+                  role="progressbar"
+                  style="width: {{ session_stats.completion_rate }}%"
+                  aria-valuenow="{{ session_stats.completion_rate }}"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  {{ session_stats.completion_rate }}%
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <h6>Course Completion Rate</h6>
+              {% set completion_rate = (user_activity.completed_courses /
+              user_activity.total_enrollments * 100) if
+              user_activity.total_enrollments > 0 else 0 %}
+              <div class="progress mb-3">
+                <div
+                  class="progress-bar bg-info"
+                  role="progressbar"
+                  style="width: {{ completion_rate|round(1) }}%"
+                  aria-valuenow="{{ completion_rate|round(1) }}"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  {{ completion_rate|round(1) }}%
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <h6>User Engagement</h6>
+              {% set engagement_rate = (user_activity.active_enrollments /
+              user_activity.total_enrollments * 100) if
+              user_activity.total_enrollments > 0 else 0 %}
+              <div class="progress mb-3">
+                <div
+                  class="progress-bar bg-warning"
+                  role="progressbar"
+                  style="width: {{ engagement_rate|round(1) }}%"
+                  aria-valuenow="{{ engagement_rate|round(1) }}"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  {{ engagement_rate|round(1) }}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-md-12">
+              <h6>Key Insights</h6>
+              <ul class="list-unstyled">
+                <li>
+                  <i class="fas fa-check-circle text-success me-2"></i>
+                  Session completion rate is {{ "excellent" if
+                  session_stats.completion_rate >= 80 else "good" if
+                  session_stats.completion_rate >= 60 else "needs improvement"
+                  }}
+                </li>
+                <li>
+                  <i class="fas fa-users text-primary me-2"></i>
+                  {{ user_activity.active_enrollments }} students are actively
+                  learning
+                </li>
+                <li>
+                  <i class="fas fa-book text-info me-2"></i>
+                  Most popular course: {{ top_courses[0].title if top_courses
+                  else "No data" }}
+                </li>
+                <li>
+                  <i class="fas fa-trending-up text-success me-2"></i>
+                  {{ registration_trends|length }} days of registration data
+                  available
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Registration Trends Chart
+  const registrationData = {{ registration_trends|tojson }};
+  const registrationLabels = registrationData.map(item => item.date).reverse();
+  const registrationValues = registrationData.map(item => item.registrations).reverse();
+
+  const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+  new Chart(registrationCtx, {
+      type: 'line',
+      data: {
+          labels: registrationLabels,
+          datasets: [{
+              label: 'New Registrations',
+              data: registrationValues,
+              borderColor: 'rgb(75, 192, 192)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              tension: 0.1
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+              y: {
+                  beginAtZero: true,
+                  ticks: {
+                      stepSize: 1
+                  }
+              }
+          }
+      }
+  });
+
+  // Session Trends Chart
+  const sessionData = {{ session_trends|tojson }};
+  const sessionLabels = sessionData.map(item => item.date).reverse();
+  const sessionValues = sessionData.map(item => item.sessions).reverse();
+  const completedValues = sessionData.map(item => item.completed).reverse();
+
+  const sessionCtx = document.getElementById('sessionChart').getContext('2d');
+  new Chart(sessionCtx, {
+      type: 'bar',
+      data: {
+          labels: sessionLabels,
+          datasets: [{
+              label: 'Total Sessions',
+              data: sessionValues,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgb(54, 162, 235)',
+              borderWidth: 1
+          }, {
+              label: 'Completed Sessions',
+              data: completedValues,
+              backgroundColor: 'rgba(75, 192, 192, 0.5)',
+              borderColor: 'rgb(75, 192, 192)',
+              borderWidth: 1
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+              y: {
+                  beginAtZero: true,
+                  ticks: {
+                      stepSize: 1
+                  }
+              }
+          }
+      }
+  });
+
+  // Export functionality
+  function exportReport(format) {
+      if (format === 'pdf') {
+          window.print();
+      } else if (format === 'csv') {
+          // Simple CSV export of key statistics
+          const csvData = [
+              ['Metric', 'Value'],
+              ['Total Sessions', '{{ session_stats.total_sessions }}'],
+              ['Completed Sessions', '{{ session_stats.completed_sessions }}'],
+              ['Completion Rate', '{{ session_stats.completion_rate }}%'],
+              ['Total Enrollments', '{{ user_activity.total_enrollments }}'],
+              ['Active Enrollments', '{{ user_activity.active_enrollments }}'],
+              ['Completed Courses', '{{ user_activity.completed_courses }}'],
+              ['Progress Records', '{{ user_activity.total_progress_records }}']
+          ];
+
+          const csv = csvData.map(row => row.join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'learning_hub_report.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+      }
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends "base.html" %} {% block title %}Course Management - Learning Hub{%
+endblock %} {% block content %}
+<div class="row">
+  <!-- Sidebar -->
+  <div class="col-md-3">
+    <div class="sidebar p-3">
+      <h5 class="mb-4"><i class="fas fa-user-shield me-2"></i>Admin Portal</h5>
+      <ul class="nav nav-pills flex-column">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+            <i class="fas fa-tachometer-alt me-2"></i>Overview
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.user_management') }}">
+            <i class="fas fa-users me-2"></i>User Management
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="{{ url_for('admin.courses') }}">
+            <i class="fas fa-book me-2"></i>Courses
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('admin.reports') }}">
+            <i class="fas fa-chart-bar me-2"></i>Reports
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="col-md-9">
+    <div class="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Course Management</h2>
+        <div class="d-flex gap-2">
+          <input
+            type="text"
+            class="form-control"
+            id="searchInput"
+            placeholder="Search courses..."
+            style="width: 250px"
+          />
+          <div class="dropdown">
+            <button
+              class="btn btn-outline-secondary dropdown-toggle"
+              type="button"
+              data-bs-toggle="dropdown"
+            >
+              <i class="fas fa-filter me-1"></i>Filter
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="#" data-filter="all"
+                  >All Courses</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" data-filter="beginner"
+                  >Beginner</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" data-filter="intermediate"
+                  >Intermediate</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" data-filter="advanced"
+                  >Advanced</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ stats.total_courses }}</h4>
+            <p class="mb-0">Total Courses</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ stats.beginner_courses }}</h4>
+            <p class="mb-0">Beginner Level</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ stats.intermediate_courses }}</h4>
+            <p class="mb-0">Intermediate Level</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ stats.advanced_courses }}</h4>
+            <p class="mb-0">Advanced Level</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Courses Table -->
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <h5 class="mb-0">All Courses</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover" id="coursesTable">
+              <thead>
+                <tr>
+                  <th>Course Title</th>
+                  <th>Creator</th>
+                  <th>Difficulty</th>
+                  <th>Duration</th>
+                  <th>Enrollments</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for course in courses %}
+                <tr
+                  data-searchable
+                  data-difficulty="{{ course.difficulty_level }}"
+                >
+                  <td>
+                    <div>
+                      <strong data-searchable>{{ course.title }}</strong>
+                      <br />
+                      <small class="text-muted"
+                        >{{ course.description[:100] }}{% if course.description
+                        and course.description|length > 100 %}...{% endif
+                        %}</small
+                      >
+                    </div>
+                  </td>
+                  <td>
+                    <div data-searchable>
+                      <strong>{{ course.creator_name or 'Unknown' }}</strong>
+                      <br />
+                      <small class="text-muted"
+                        >{{ course.creator_email or 'N/A' }}</small
+                      >
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      class="badge bg-{{ 'success' if course.difficulty_level == 'beginner' 
+                                         else 'warning' if course.difficulty_level == 'intermediate'
+                                         else 'danger' }}"
+                    >
+                      {{ course.difficulty_level.title() }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-info"
+                      >{{ course.estimated_duration or 0 }}h</span
+                    >
+                  </td>
+                  <td>
+                    <span class="badge bg-primary"
+                      >{{ course_enrollments.get(course.id, 0) }}</span
+                    >
+                  </td>
+                  <td>
+                    <small class="text-muted"
+                      >{{ course.created_at.split(' ')[0] if course.created_at
+                      else 'N/A' }}</small
+                    >
+                  </td>
+                  <td>
+                    <a
+                      href="{{ url_for('content.course_view', course_id=course.id) }}"
+                      class="btn btn-sm btn-outline-primary"
+                      title="View Course"
+                    >
+                      <i class="fas fa-eye me-1"></i>View Course
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Search functionality
+  document
+    .getElementById("searchInput")
+    .addEventListener("input", function (e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll("#coursesTable tbody tr");
+
+      rows.forEach((row) => {
+        const searchableElements = row.querySelectorAll("[data-searchable]");
+        let found = false;
+
+        searchableElements.forEach((element) => {
+          if (element.textContent.toLowerCase().includes(searchTerm)) {
+            found = true;
+          }
+        });
+
+        row.style.display = found ? "" : "none";
+      });
+    });
+
+  // Filter functionality
+  document.querySelectorAll("[data-filter]").forEach((filter) => {
+    filter.addEventListener("click", function (e) {
+      e.preventDefault();
+      const filterValue = this.dataset.filter;
+      const rows = document.querySelectorAll("#coursesTable tbody tr");
+
+      rows.forEach((row) => {
+        if (filterValue === "all" || row.dataset.difficulty === filterValue) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      });
+
+      // Update button text
+      document.querySelector(".dropdown-toggle").innerHTML =
+        '<i class="fas fa-filter me-1"></i>' + this.textContent;
+    });
+  });
+</script>
+
+{% endblock %}

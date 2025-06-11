@@ -95,7 +95,7 @@ endblock %} {% block content %}
                       <i class="fas fa-trash"></i>
                     </button>
                   </div>
-                  {% else %}
+                  {% elif session.user_role == 'student' %}
                   <!-- Student lesson actions -->
                   <div class="d-flex flex-column align-items-end">
                     <button
@@ -128,6 +128,11 @@ endblock %} {% block content %}
                       <i class="fas fa-check me-1"></i>Mark Complete
                     </button>
                     {% endif %}
+                  </div>
+                  {% else %}
+                  <!-- Admin and other roles - just view mode -->
+                  <div class="text-muted">
+                    <small><i class="fas fa-eye me-1"></i>View Only</small>
                   </div>
                   {% endif %}
                 </div>
@@ -237,7 +242,20 @@ endblock %} {% block content %}
           >
             <i class="fas fa-sort me-2"></i>Reorder Lessons
           </button>
-          {% endif %} {% endif %}
+          {% endif %} {% elif session.user_role == 'admin' %}
+          <a
+            href="{{ url_for('admin.courses') }}"
+            class="btn btn-primary w-100 mb-2"
+          >
+            <i class="fas fa-arrow-left me-2"></i>Back to Admin Courses
+          </a>
+          <button
+            class="btn btn-outline-info w-100 mb-2"
+            onclick="window.print()"
+          >
+            <i class="fas fa-print me-2"></i>Print Course
+          </button>
+          {% endif %}
         </div>
       </div>
 

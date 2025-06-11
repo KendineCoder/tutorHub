@@ -7,7 +7,7 @@ endblock %} {% block content %}
       <h5 class="mb-4"><i class="fas fa-user-shield me-2"></i>Admin Portal</h5>
       <ul class="nav nav-pills flex-column">
         <li class="nav-item">
-          <a class="nav-link active" href="#overview">
+          <a class="nav-link active" href="{{ url_for('admin.dashboard') }}">
             <i class="fas fa-tachometer-alt me-2"></i>Overview
           </a>
         </li>
@@ -17,12 +17,12 @@ endblock %} {% block content %}
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#courses">
+          <a class="nav-link" href="{{ url_for('admin.courses') }}">
             <i class="fas fa-book me-2"></i>Courses
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#reports">
+          <a class="nav-link" href="{{ url_for('admin.reports') }}">
             <i class="fas fa-chart-bar me-2"></i>Reports
           </a>
         </li>
@@ -62,11 +62,18 @@ endblock %} {% block content %}
           </div>
         </div>
       </div>
-
       <!-- Recent Users -->
       <div class="card dashboard-card">
-        <div class="card-header">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
           <h5 class="mb-0">Recent Registrations</h5>
+          <a
+            href="{{ url_for('admin.user_management') }}"
+            class="btn btn-sm btn-outline-primary"
+          >
+            <i class="fas fa-users me-1"></i>Manage Users
+          </a>
         </div>
         <div class="card-body">
           <div class="table-responsive">
@@ -77,7 +84,6 @@ endblock %} {% block content %}
                   <th>Email</th>
                   <th>Role</th>
                   <th>Registered</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,33 +103,6 @@ endblock %} {% block content %}
                     </span>
                   </td>
                   <td>{{ user.created_at }}</td>
-                  <td>
-                    <div class="btn-group" role="group">
-                      <button
-                        class="btn btn-sm btn-outline-primary view-user-btn"
-                        data-user-id="{{ user.id }}"
-                        title="View Details"
-                      >
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-outline-secondary edit-user-btn"
-                        data-user-id="{{ user.id }}"
-                        title="Edit User"
-                      >
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-outline-warning toggle-status-btn"
-                        data-user-id="{{ user.id }}"
-                        title="Toggle Status"
-                      >
-                        <i
-                          class="fas fa-{{ 'lock' if user.is_active else 'unlock' }}"
-                        ></i>
-                      </button>
-                    </div>
-                  </td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -134,6 +113,4 @@ endblock %} {% block content %}
     </div>
   </div>
 </div>
-
-<script src="{{ url_for('static', filename='js/user-management.js') }}"></script>
 {% endblock %}
