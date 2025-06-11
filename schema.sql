@@ -124,6 +124,23 @@ CREATE TABLE IF NOT EXISTS reviews (
     UNIQUE(session_id, student_id)
 );
 
+-- Course materials
+CREATE TABLE IF NOT EXISTS materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER, -- in bytes
+    file_type TEXT, -- pdf, doc, video, etc.
+    uploaded_by INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users (id) ON DELETE CASCADE
+);
+
 -- ==================== SAMPLE DATA ====================
 
 -- Insert sample users with plain text passwords (using INSERT OR REPLACE to update existing users)
@@ -218,3 +235,5 @@ CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_reviews_session_student ON reviews(session_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_materials_course ON materials(course_id);
+CREATE INDEX IF NOT EXISTS idx_materials_uploaded_by ON materials(uploaded_by);

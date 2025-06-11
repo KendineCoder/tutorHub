@@ -1,0 +1,264 @@
+{% extends "base.html" %} {% block title %}Materials Management - Learning Hub{% endblock %} {% block content %}
+<div class="row">
+  <!-- Sidebar -->
+  <div class="col-md-3">
+    <div class="sidebar p-3">
+      <h5 class="mb-4"><i class="fas fa-edit me-2"></i>Content Portal</h5>
+      <ul class="nav nav-pills flex-column">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('content.dashboard') }}">
+            <i class="fas fa-tachometer-alt me-2"></i>Overview
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('content.courses') }}">
+            <i class="fas fa-book me-2"></i>Courses
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="{{ url_for('content.materials') }}">
+            <i class="fas fa-folder me-2"></i>Materials
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="col-md-9">
+    <div class="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Materials Management</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadMaterialModal">
+          <i class="fas fa-plus me-2"></i>Upload Material
+        </button>
+      </div>
+
+      <!-- Materials Stats -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ materials|length }}</h4>
+            <p class="mb-0">Total Materials</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ materials|selectattr('file_type', 'equalto', 'pdf')|list|length }}</h4>
+            <p class="mb-0">PDF Documents</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ (materials|sum(attribute='file_size') / (1024*1024))|round(2) if materials else 0 }}</h4>
+            <p class="mb-0">MB Total Size</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card">
+            <h4>{{ courses|length }}</h4>
+            <p class="mb-0">Courses</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Materials Table -->
+      <div class="card dashboard-card">
+        <div class="card-header">
+          <h5 class="mb-0">All Materials</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover" id="materialsTable">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Course</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Uploaded</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for material in materials %}
+                <tr>
+                  <td>
+                    <div>
+                      <strong><i class="fas fa-file me-2"></i>{{ material.title }}</strong>
+                      <br />
+                      <small class="text-muted">{{ material.description or 'No description' }}</small>
+                      <br />
+                      <small class="text-info">{{ material.file_name }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary">{{ material.course_title }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ 'danger' if material.file_type == 'pdf' 
+                                            else 'success' if material.file_type in ['doc', 'docx']
+                                            else 'warning' if material.file_type in ['mp4', 'avi']
+                                            else 'info' }}">
+                      {{ material.file_type.upper() }}
+                    </span>
+                  </td>
+                  <td>
+                    <small class="text-muted">
+                      {{ "%.2f"|format(material.file_size / (1024*1024)) if material.file_size else '0' }} MB
+                    </small>
+                  </td>
+                  <td>
+                    <small class="text-muted">
+                      {{ material.created_at.split(' ')[0] if material.created_at else 'N/A' }}
+                    </small>
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <a
+                        href="{{ url_for('static', filename=material.file_path) }}"
+                        class="btn btn-sm btn-outline-primary"
+                        target="_blank"
+                        title="Download"
+                      >
+                        <i class="fas fa-download"></i>
+                      </a>
+                      <button
+                        class="btn btn-sm btn-outline-danger delete-material-btn"
+                        data-material-id="{{ material.id }}"
+                        data-material-title="{{ material.title }}"
+                        title="Delete"
+                      >
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+                {% if not materials %}
+                <tr>
+                  <td colspan="6" class="text-center py-4">
+                    <div class="text-muted">
+                      <i class="fas fa-folder-open fa-3x mb-3"></i>
+                      <h5>No materials uploaded yet</h5>
+                      <p>Start by uploading learning materials for your courses.</p>
+                      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadMaterialModal">
+                        <i class="fas fa-plus me-2"></i>Upload First Material
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Material Modal -->
+<div class="modal fade" id="uploadMaterialModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-upload me-2"></i>Upload Material
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('content.upload_material') }}" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="course_id" class="form-label">Course <span class="text-danger">*</span></label>
+            <select class="form-select" id="course_id" name="course_id" required>
+              <option value="">Select a course</option>
+              {% for course in courses %}
+              <option value="{{ course.id }}">{{ course.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="title" class="form-label">Material Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="title" name="title" required 
+                   placeholder="e.g., Chapter 1 - Introduction">
+          </div>
+          
+          <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3"
+                      placeholder="Brief description of the material..."></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label for="file" class="form-label">File <span class="text-danger">*</span></label>
+            <input type="file" class="form-control" id="file" name="file" required
+                   accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov,.zip,.txt">
+            <div class="form-text">
+              Supported formats: PDF, DOC, DOCX, PPT, PPTX, MP4, AVI, MOV, ZIP, TXT (Max 50MB)
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload Material
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteMaterialModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Confirm Delete
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the material "<span id="materialTitle"></span>"?</p>
+        <p class="text-danger"><strong>Warning:</strong> This action cannot be undone and the file will be permanently removed.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteMaterialForm" method="POST" style="display: inline;">
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash me-2"></i>Delete Material
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Handle delete material
+  document.querySelectorAll('.delete-material-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const materialId = this.dataset.materialId;
+      const materialTitle = this.dataset.materialTitle;
+      
+      document.getElementById('materialTitle').textContent = materialTitle;
+      document.getElementById('deleteMaterialForm').action = `/content/materials/${materialId}/delete`;
+      
+      new bootstrap.Modal(document.getElementById('deleteMaterialModal')).show();
+    });
+  });
+
+  // File size validation
+  document.getElementById('file').addEventListener('change', function() {
+    const file = this.files[0];
+    if (file && file.size > 50 * 1024 * 1024) { // 50MB limit
+      alert('File size must be less than 50MB');
+      this.value = '';
+    }
+  });
+</script>
+{% endblock %}

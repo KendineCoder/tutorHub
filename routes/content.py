@@ -6,6 +6,9 @@ from utils.auth import login_required, role_required
 from utils.database import get_db_connection
 from datetime import datetime
 import sqlite3
+import os
+from werkzeug.utils import secure_filename
+from flask import current_app
 
 content_bp = Blueprint('content', __name__, url_prefix='/content')
 
@@ -17,10 +20,76 @@ content_bp = Blueprint('content', __name__, url_prefix='/content')
 def dashboard():
     conn = get_db_connection()
 
-    courses = conn.execute('SELECT * FROM courses ORDER BY created_at DESC').fetchall()
+    # Get statistics for overview
+    stats = {}
+    
+    # Total courses created by this content manager
+    stats['total_courses'] = conn.execute(
+        'SELECT COUNT(*) as count FROM courses WHERE created_by = ?', 
+        (session['user_id'],)
+    ).fetchone()['count']
+    
+    # Total lessons across all courses
+    stats['total_lessons'] = conn.execute('''
+        SELECT COUNT(*) as count FROM lessons l 
+        JOIN courses c ON l.course_id = c.id 
+        WHERE c.created_by = ?
+    ''', (session['user_id'],)).fetchone()['count']
+    
+    # Students enrolled in courses
+    stats['students_enrolled'] = conn.execute('''
+        SELECT COUNT(DISTINCT e.student_id) as count FROM enrollments e
+        JOIN courses c ON e.course_id = c.id 
+        WHERE c.created_by = ? AND e.status = 'active'
+    ''', (session['user_id'],)).fetchone()['count']
+    
+    # Recent courses (last 5)
+    recent_courses = conn.execute('''
+        SELECT * FROM courses 
+        WHERE created_by = ? 
+        ORDER BY created_at DESC LIMIT 5
+    ''', (session['user_id'],)).fetchall()
+    
+    # Get course enrollments for recent courses
+    course_enrollments = {}
+    if recent_courses:
+        course_ids = [str(course['id']) for course in recent_courses]
+        enrollments = conn.execute(f'''
+            SELECT course_id, COUNT(*) as count 
+            FROM enrollments 
+            WHERE course_id IN ({','.join('?' * len(course_ids))}) 
+            AND status = 'active'
+            GROUP BY course_id
+        ''', course_ids).fetchall()
+        
+        for enrollment in enrollments:
+            course_enrollments[enrollment['course_id']] = enrollment['count']
 
     conn.close()
-    return render_template('content_dashboard.html', courses=courses)
+    return render_template('content_dashboard.html', 
+                         stats=stats, 
+                         recent_courses=recent_courses,
+                         course_enrollments=course_enrollments)
+
+
+@content_bp.route('/courses')
+@login_required
+@role_required('content_manager')
+def courses():
+    conn = get_db_connection()
+
+    # Get all courses with enrollment counts
+    courses = conn.execute('''
+        SELECT c.*, COUNT(e.id) as enrollment_count
+        FROM courses c
+        LEFT JOIN enrollments e ON c.id = e.course_id AND e.status = 'active'
+        WHERE c.created_by = ?
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
+    ''', (session['user_id'],)).fetchall()
+
+    conn.close()
+    return render_template('content_courses.html', courses=courses)
 
 
 @content_bp.route('/course/create')
@@ -402,6 +471,190 @@ def delete_lesson(lesson_id):
         return jsonify({'status': 'success', 'message': 'Lesson deleted successfully'})
     
     except sqlite3.Error as e:
+        return jsonify({'error': 'Database error occurred'}), 500
+    finally:
+        conn.close()
+
+
+# ========== MATERIALS MANAGEMENT ROUTES ==========
+
+@content_bp.route('/materials')
+@login_required
+@role_required('content_manager')
+def materials():
+    conn = get_db_connection()
+    
+    # Get all materials for courses created by this content manager
+    materials = conn.execute('''
+        SELECT m.*, c.title as course_title
+        FROM materials m
+        JOIN courses c ON m.course_id = c.id
+        WHERE c.created_by = ?
+        ORDER BY m.created_at DESC
+    ''', (session['user_id'],)).fetchall()
+    
+    # Get courses for the dropdown
+    courses = conn.execute('''
+        SELECT id, title FROM courses 
+        WHERE created_by = ? 
+        ORDER BY title
+    ''', (session['user_id'],)).fetchall()
+    
+    conn.close()
+    return render_template('content_materials.html', materials=materials, courses=courses)
+
+
+@content_bp.route('/materials/upload', methods=['POST'])
+@login_required
+@role_required('content_manager')
+def upload_material():
+    # Get form data
+    course_id = request.form.get('course_id')
+    title = request.form.get('title')
+    description = request.form.get('description', '')
+    
+    if not course_id or not title:
+        flash('Course and title are required', 'error')
+        return redirect(url_for('content.materials'))
+    
+    # Check if file was uploaded
+    if 'file' not in request.files:
+        flash('No file selected', 'error')
+        return redirect(url_for('content.materials'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('content.materials'))
+    
+    conn = get_db_connection()
+    try:
+        # Verify course exists and user has permission
+        course = conn.execute(
+            'SELECT * FROM courses WHERE id = ? AND created_by = ?', 
+            (course_id, session['user_id'])
+        ).fetchone()
+        
+        if not course:
+            flash('Course not found or permission denied', 'error')
+            return redirect(url_for('content.materials'))
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'materials')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Secure the filename and save file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+        unique_filename = timestamp + filename
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        file.save(file_path)
+        
+        # Get file info
+        file_size = os.path.getsize(file_path)
+        file_type = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'unknown'
+        
+        # Store relative path for database
+        relative_path = f'uploads/materials/{unique_filename}'
+        
+        # Insert material record
+        conn.execute('''
+            INSERT INTO materials (course_id, title, description, file_name, file_path, 
+                                 file_size, file_type, uploaded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (course_id, title, description, filename, relative_path, 
+              file_size, file_type, session['user_id']))
+        
+        conn.commit()
+        flash('Material uploaded successfully', 'success')
+        
+    except Exception as e:
+        flash(f'Error uploading material: {str(e)}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('content.materials'))
+
+
+@content_bp.route('/materials/<int:material_id>/delete', methods=['POST'])
+@login_required
+@role_required('content_manager')
+def delete_material(material_id):
+    conn = get_db_connection()
+    try:
+        # Get material and verify permissions
+        material = conn.execute('''
+            SELECT m.*, c.created_by
+            FROM materials m
+            JOIN courses c ON m.course_id = c.id
+            WHERE m.id = ?
+        ''', (material_id,)).fetchone()
+        
+        if not material:
+            flash('Material not found', 'error')
+            return redirect(url_for('content.materials'))
+        
+        if material['created_by'] != session['user_id'] and session['user_role'] != 'admin':
+            flash('Permission denied', 'error')
+            return redirect(url_for('content.materials'))
+        
+        # Delete file from filesystem
+        file_path = os.path.join(current_app.root_path, 'static', material['file_path'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Delete from database
+        conn.execute('DELETE FROM materials WHERE id = ?', (material_id,))
+        conn.commit()
+        
+        flash('Material deleted successfully', 'success')
+        
+    except Exception as e:
+        flash(f'Error deleting material: {str(e)}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('content.materials'))
+
+
+# ========== MATERIALS API ENDPOINTS ==========
+
+@content_bp.route('/api/materials/<int:course_id>')
+@login_required
+def get_course_materials(course_id):
+    conn = get_db_connection()
+    try:
+        # Check if user has access to this course
+        if session['user_role'] == 'content_manager':
+            course = conn.execute(
+                'SELECT * FROM courses WHERE id = ? AND created_by = ?',
+                (course_id, session['user_id'])
+            ).fetchone()
+        elif session['user_role'] == 'student':
+            # Check if student is enrolled
+            course = conn.execute('''
+                SELECT c.* FROM courses c
+                JOIN enrollments e ON c.id = e.course_id
+                WHERE c.id = ? AND e.student_id = ? AND e.status = 'active'
+            ''', (course_id, session['user_id'])).fetchone()
+        else:
+            course = conn.execute('SELECT * FROM courses WHERE id = ?', (course_id,)).fetchone()
+        
+        if not course:
+            return jsonify({'error': 'Course not found or access denied'}), 404
+        
+        materials = conn.execute('''
+            SELECT id, title, description, file_name, file_type, file_size, created_at
+            FROM materials 
+            WHERE course_id = ?
+            ORDER BY created_at DESC
+        ''', (course_id,)).fetchall()
+        
+        materials_list = [dict(material) for material in materials]
+        return jsonify({'materials': materials_list})
+        
+    except Exception as e:
         return jsonify({'error': 'Database error occurred'}), 500
     finally:
         conn.close()
