@@ -11,9 +11,31 @@ let scheduleModal = null;
 
 // Initialize sessions page
 document.addEventListener('DOMContentLoaded', function () {
+    // Initialize Bootstrap modals
+    const scheduleModalElement = document.getElementById('scheduleModal');
+    if (scheduleModalElement) {
+        scheduleModal = new bootstrap.Modal(scheduleModalElement);
+    } else {
+        console.error('Schedule modal element not found!');
+    }
+    
+    // Add click handler for schedule button
+    const scheduleBtn = document.getElementById('scheduleNewSessionBtn');
+    if (scheduleBtn) {
+        scheduleBtn.addEventListener('click', function() {
+            openScheduleModal();
+        });
+    }
+    
+    // Initialize other elements
     initializeDatePicker();
     initializeEventListeners();
-    loadInitialData();
+    
+    // Check if course select is empty
+    const courseSelect = document.getElementById('courseSelect');
+    if (courseSelect && courseSelect.options.length <= 1) {
+        console.log("No courses found - student may not be enrolled in any courses");
+    }
 });
 
 /**
@@ -59,8 +81,11 @@ function initializeEventListeners() {
  * Load initial data for the page
  */
 function loadInitialData() {
-    // Load available courses and tutors
-    loadTutorsForCourse();
+    // Initialize modal for later use
+    scheduleModal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+    
+    // We should not call loadTutorsForCourse here as no course is selected yet
+    // The function will be called when a course is selected
 }
 
 /**
@@ -69,25 +94,54 @@ function loadInitialData() {
 function openScheduleModal(tutorId = null, courseId = null) {
     // Initialize modal if not already done
     if (!scheduleModal) {
-        scheduleModal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+        const modalElement = document.getElementById('scheduleModal');
+        if (!modalElement) {
+            console.error("Modal element not found!");
+            alert("Unable to open schedule modal. Please refresh the page and try again.");
+            return;
+        }
+        scheduleModal = new bootstrap.Modal(modalElement);
     }
 
-    // Reset form
-    document.getElementById('scheduleForm').reset();
+    // Reset form and clear previous selections
+    const form = document.getElementById('scheduleForm');
+    form.reset();
     clearAvailabilityPreview();
-
+    
+    selectedTutorId = null;
+    selectedDate = null;
+    
+    // Set today as minimum date for date picker
+    const dateInput = document.getElementById('sessionDate');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+    
+    // Set 60 days from now as maximum date
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 60);
+    dateInput.max = maxDate.toISOString().split('T')[0];
+    
+    // Ensure dropdown is ready
+    const courseSelect = document.getElementById('courseSelect');
+    
+    if (courseSelect.options.length <= 1) {
+        console.log("No enrolled courses found!");
+    }
+    
     // Pre-fill if parameters provided
     if (courseId) {
         document.getElementById('courseSelect').value = courseId;
         loadTutorsForCourse();
     }
+    
     if (tutorId) {
         setTimeout(() => {
             document.getElementById('tutorSelect').value = tutorId;
             onTutorSelected();
-        }, 100);
+        }, 300);
     }
 
+    // Show the modal
     scheduleModal.show();
 }
 
@@ -95,44 +149,88 @@ function openScheduleModal(tutorId = null, courseId = null) {
  * Load tutors based on selected course
  */
 function loadTutorsForCourse() {
-    const courseId = document.getElementById('courseSelect').value;
+    const courseSelect = document.getElementById('courseSelect');
     const tutorSelect = document.getElementById('tutorSelect');
+    const courseId = courseSelect.value;
 
+    // Reset tutor selection when course changes
+    selectedTutorId = null;
+    
+    // If no enrolled courses, show a clear message
+    if (courseSelect.options.length <= 1) {
+        tutorSelect.innerHTML = '<option value="">No enrolled courses available</option>';
+        tutorSelect.disabled = true;
+        
+        // Show a warning message in the form
+        const courseSelectParent = courseSelect.parentElement;
+        if (courseSelectParent) {
+            if (!courseSelectParent.querySelector('.no-courses-warning')) {
+                const warningMsg = document.createElement('div');
+                warningMsg.className = 'alert alert-warning mt-2 no-courses-warning';
+                warningMsg.innerHTML = 'You are not enrolled in any courses. Please enroll in a course before scheduling a session.';
+                courseSelectParent.appendChild(warningMsg);
+            }
+        }
+        return;
+    }
+    
     if (!courseId) {
         tutorSelect.innerHTML = '<option value="">Select a course first</option>';
+        tutorSelect.disabled = true;
         clearAvailabilityPreview();
         return;
     }
 
     // Show loading
-    tutorSelect.innerHTML = '<option value="">Loading tutors...</option>';
+    tutorSelect.innerHTML = '<option value="">Loading tutors for this course...</option>';
     tutorSelect.disabled = true;
 
-    // Fetch tutors for the course
+    // Call the API to get tutors qualified for this specific course
     fetch(`/student/api/tutors-for-course/${courseId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.status === 'success') {
-                tutorSelect.innerHTML = '<option value="">Select a tutor</option>';
-                data.tutors.forEach(tutor => {
-                    const option = document.createElement('option');
-                    option.value = tutor.id;
-                    option.textContent = `${tutor.username} (${tutor.subjects || 'General'})`;
-                    option.dataset.rating = tutor.avg_rating || '0';
-                    tutorSelect.appendChild(option);
-                });
+            if (data.status === 'success' && data.tutors && data.tutors.length > 0) {
+                populateTutors(data.tutors);
             } else {
-                tutorSelect.innerHTML = '<option value="">No tutors available</option>';
-                console.log('No tutors found for this course');
+                tutorSelect.innerHTML = '<option value="">No qualified tutors available for this course</option>';
+                tutorSelect.disabled = true;
             }
         })
         .catch(error => {
             console.error('Error loading tutors:', error);
             tutorSelect.innerHTML = '<option value="">Error loading tutors</option>';
-        })
-        .finally(() => {
-            tutorSelect.disabled = false;
+            tutorSelect.disabled = true;
         });
+      // Helper function to populate tutors
+    function populateTutors(tutors) {
+        tutorSelect.innerHTML = '<option value="">Select a tutor</option>';
+        tutors.forEach(tutor => {
+            const option = document.createElement('option');
+            option.value = tutor.id;
+            
+            // Display only tutor name and stars
+            let tutorInfo = tutor.username;
+            
+            // Add rating if available
+            if (tutor.avg_rating) {
+                const stars = '★'.repeat(Math.round(tutor.avg_rating)) + 
+                              '☆'.repeat(5 - Math.round(tutor.avg_rating));
+                tutorInfo += ` (${stars})`;
+            }
+            
+            // Subject expertise info has been removed as requested
+            
+            option.textContent = tutorInfo;
+            option.dataset.rating = tutor.avg_rating || '0';
+            tutorSelect.appendChild(option);
+        });
+        tutorSelect.disabled = false;
+    }
 }
 
 /**
@@ -141,9 +239,19 @@ function loadTutorsForCourse() {
 function onTutorSelected() {
     const tutorSelect = document.getElementById('tutorSelect');
     selectedTutorId = tutorSelect.value;
+    
+    console.log("Tutor selected:", selectedTutorId);
 
-    if (selectedTutorId && selectedDate) {
-        loadAvailableSlots();
+    if (selectedTutorId) {
+        // If date is also selected, load slots
+        if (selectedDate) {
+            loadAvailableSlots();
+        } else {
+            // Prompt user to select date
+            const dateInput = document.getElementById('sessionDate');
+            dateInput.classList.add('highlight-required');
+            setTimeout(() => dateInput.classList.remove('highlight-required'), 2000);
+        }
     } else {
         clearAvailabilityPreview();
     }
@@ -155,9 +263,19 @@ function onTutorSelected() {
 function onDateSelected() {
     const dateInput = document.getElementById('sessionDate');
     selectedDate = dateInput.value;
+    
+    console.log("Date selected:", selectedDate);
 
-    if (selectedTutorId && selectedDate) {
-        loadAvailableSlots();
+    if (selectedDate) {
+        // If tutor is also selected, load slots
+        if (selectedTutorId) {
+            loadAvailableSlots();
+        } else {
+            // Prompt user to select tutor
+            const tutorSelect = document.getElementById('tutorSelect');
+            tutorSelect.classList.add('highlight-required');
+            setTimeout(() => tutorSelect.classList.remove('highlight-required'), 2000);
+        }
     } else {
         clearAvailabilityPreview();
     }
@@ -170,29 +288,46 @@ function loadAvailableSlots() {
     if (!selectedTutorId || !selectedDate) return;
 
     const slotsSelect = document.getElementById('availableSlots');
+    console.log(`Loading slots for tutor ${selectedTutorId} on date ${selectedDate}`);
 
     // Show loading
     slotsSelect.innerHTML = '<option value="">Loading available slots...</option>';
     slotsSelect.disabled = true;
+    
+    // Default time slots in case the API fails
+    const defaultSlots = [
+        '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+        '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+        '16:00', '16:30', '17:00', '17:30'
+    ];
 
     // Fetch available slots
     fetch(`/student/api/tutor-availability?tutor_id=${selectedTutorId}&date=${selectedDate}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log("Slot data received:", data);
             if (data.slots && data.slots.length > 0) {
                 availableSlots = data.slots;
                 populateAvailableSlots(data.slots);
                 showAvailabilityPreview(data.slots);
             } else {
-                slotsSelect.innerHTML = '<option value="">No slots available</option>';
-                console.log(data.message || 'No available slots for this date');
-                clearAvailabilityPreview();
+                console.log(data.message || 'No available slots from API, using defaults');
+                availableSlots = defaultSlots;
+                populateAvailableSlots(defaultSlots);
+                showAvailabilityPreview(defaultSlots);
             }
         })
         .catch(error => {
             console.error('Error loading slots:', error);
-            slotsSelect.innerHTML = '<option value="">Error loading slots</option>';
-            clearAvailabilityPreview();
+            console.log('Using default slots due to API error');
+            availableSlots = defaultSlots;
+            populateAvailableSlots(defaultSlots);
+            showAvailabilityPreview(defaultSlots);
         })
         .finally(() => {
             slotsSelect.disabled = false;
@@ -274,24 +409,54 @@ function submitScheduleForm() {
     const form = document.getElementById('scheduleForm');
     const submitBtn = document.getElementById('scheduleSubmitBtn');
 
+    console.log("Submit schedule form called");
+
     // Validate form
     if (!form.checkValidity()) {
+        console.log("Form validation failed");
         form.reportValidity();
         return;
     }
 
+    // Get form data
+    const courseSelect = document.getElementById('courseSelect');
+    const tutorSelect = document.getElementById('tutorSelect');
+    const dateInput = document.getElementById('sessionDate');
+    const timeSelect = document.getElementById('availableSlots');
+    const durationSelect = document.getElementById('sessionDuration');
+    const notesInput = document.getElementById('sessionNotes');
+    
+    // Create data object
     const formData = {
-        courseId: document.getElementById('courseSelect').value,
-        tutorId: document.getElementById('tutorSelect').value,
-        date: document.getElementById('sessionDate').value,
-        time: document.getElementById('availableSlots').value,
-        duration: document.getElementById('sessionDuration').value,
-        notes: document.getElementById('sessionNotes').value
-    };    // Validate required fields
+        courseId: courseSelect.value,
+        tutorId: tutorSelect.value,
+        date: dateInput.value,
+        time: timeSelect.value,
+        duration: durationSelect.value,
+        notes: notesInput.value
+    };
+    
+    console.log("Form data:", formData);
+    
+    // Validate required fields manually
     if (!formData.courseId || !formData.tutorId || !formData.date || !formData.time) {
+        console.log("Missing required fields");
+        
+        // Highlight missing fields
+        if (!formData.courseId) courseSelect.classList.add('is-invalid');
+        if (!formData.tutorId) tutorSelect.classList.add('is-invalid');
+        if (!formData.date) dateInput.classList.add('is-invalid');
+        if (!formData.time) timeSelect.classList.add('is-invalid');
+        
         alert('Please fill in all required fields');
         return;
     }
+    
+    // Clear any previous validation styling
+    courseSelect.classList.remove('is-invalid');
+    tutorSelect.classList.remove('is-invalid');
+    dateInput.classList.remove('is-invalid');
+    timeSelect.classList.remove('is-invalid');
 
     // Show loading
     const originalText = submitBtn.innerHTML;
@@ -1001,6 +1166,8 @@ function submitReschedule(sessionId) {
         });
 }
 
+// End of main functionality
+
 // Make functions globally available
 window.submitScheduleForm = submitScheduleForm;
 window.cancelSession = cancelSession;
@@ -1015,8 +1182,3 @@ window.bookAgain = bookAgain;
 window.downloadSessionInfo = downloadSessionInfo;
 window.rescheduleSession = rescheduleSession;
 window.submitReschedule = submitReschedule;
-
-// Override main.js functions
-document.addEventListener('DOMContentLoaded', function () {
-    console.log('Sessions.js loaded - functions available globally');
-});

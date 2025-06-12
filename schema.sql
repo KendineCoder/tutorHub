@@ -147,16 +147,14 @@ CREATE TABLE IF NOT EXISTS materials (
 -- ==================== SAMPLE DATA ====================
 
 -- Insert sample users with plain text passwords (using INSERT OR REPLACE to update existing users)
-INSERT OR REPLACE INTO users (id, username, email, password, role, parent_id) VALUES
-(1, 'admin_user', 'admin@learninghub.edu', 'password123', 'admin', NULL),
-(2, 'john_student', 'john.doe@student.edu', 'password123', 'student', 4),
-(3, 'jane_tutor', 'jane.smith@tutor.edu', 'password123', 'tutor', NULL),
-(4, 'parent_jones', 'parent@family.com', 'password123', 'parent', NULL),
-(5, 'content_manager', 'content@learninghub.edu', 'password123', 'content_manager', NULL),
-(6, 'sarah_student', 'sarah@student.edu', 'password123', 'student', 4),
-(7, 'mike_tutor', 'mike@tutor.edu', 'password123', 'tutor', NULL),
-(8, 'emma_child', 'emma@jones.com', 'password123', 'student', 4),
-(9, 'alex_child', 'alex@jones.com', 'password123', 'student', 4);
+INSERT OR REPLACE INTO users (id, username, email, password, role) VALUES
+(1, 'admin_user', 'admin@learninghub.edu', 'password123', 'admin'),
+(2, 'john_student', 'john.doe@student.edu', 'password123', 'student'),
+(3, 'jane_tutor', 'jane.smith@tutor.edu', 'password123', 'tutor'),
+(4, 'parent_jones', 'parent@family.com', 'password123', 'parent'),
+(5, 'content_manager', 'content@learninghub.edu', 'password123', 'content_manager'),
+(6, 'sarah_student', 'sarah@student.edu', 'password123', 'student'),
+(7, 'mike_tutor', 'mike@tutor.edu', 'password123', 'tutor');
 
 -- Insert sample courses
 INSERT OR IGNORE INTO courses (title, description, difficulty_level, estimated_duration, created_by) VALUES
