@@ -258,7 +258,196 @@ def content_dashboard():
     return render_template('content_dashboard.html', courses=courses)
 
 
-# Course Management
+# Session scheduling
+@app.route('/schedule_session', methods=['GET', 'POST'])
+@login_required
+@role_required('student')
+def schedule_session():
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+        tutor_id = request.form['tutor_id']
+        course_id = request.form.get('course_id')  # Optional
+        session_date = request.form['session_date']
+        session_time = request.form['session_time']
+        notes = request.form.get('notes', '')
+
+        # Validate date (must be in the future)
+        from datetime import datetime, date
+        try:
+            selected_date = datetime.strptime(session_date, '%Y-%m-%d').date()
+            if selected_date <= date.today():
+                flash('Please select a future date for your session.', 'error')
+                return redirect(url_for('schedule_session'))
+        except ValueError:
+            flash('Invalid date format.', 'error')
+            return redirect(url_for('schedule_session'))
+
+        # Check if tutor is available (simplified check)
+        existing_session = conn.execute('''
+            SELECT * FROM sessions 
+            WHERE tutor_id = ? AND scheduled_date = ? AND scheduled_time = ? 
+            AND status IN ('scheduled', 'in_progress')
+        ''', (tutor_id, session_date, session_time)).fetchone()
+
+        if existing_session:
+            flash('Sorry, that tutor is not available at the selected time. Please choose a different time.', 'error')
+            return redirect(url_for('schedule_session'))
+
+        # Create the session
+        try:
+            conn.execute('''
+                INSERT INTO sessions (student_id, tutor_id, course_id, scheduled_date, scheduled_time, notes, status)
+                VALUES (?, ?, ?, ?, ?, ?, 'scheduled')
+            ''', (session['user_id'], tutor_id, course_id if course_id else None, session_date, session_time, notes))
+
+            conn.commit()
+
+            # Get tutor name for confirmation
+            tutor = conn.execute('SELECT username FROM users WHERE id = ?', (tutor_id,)).fetchone()
+            tutor_name = tutor['username'] if tutor else 'Unknown'
+
+            flash(f'✅ Session scheduled successfully with {tutor_name} on {session_date} at {session_time}!', 'success')
+            return redirect(url_for('student_dashboard'))
+
+        except Exception as e:
+            flash('Error scheduling session. Please try again.', 'error')
+
+    # Get available tutors
+    tutors = conn.execute('''
+        SELECT id, username, email FROM users 
+        WHERE role = 'tutor' 
+        ORDER BY username
+    ''').fetchall()
+
+    # Get student's enrolled courses
+    courses = conn.execute('''
+        SELECT c.* FROM courses c
+        JOIN progress p ON c.id = p.course_id
+        WHERE p.user_id = ?
+        ORDER BY c.title
+    ''', (session['user_id'],)).fetchall()
+
+    conn.close()
+    return render_template('schedule_session.html', tutors=tutors, courses=courses)
+
+
+# Quick schedule from dashboard
+@app.route('/api/quick_schedule', methods=['POST'])
+@login_required
+@role_required('student')
+def quick_schedule():
+    data = request.get_json()
+    tutor_id = data.get('tutor_id')
+    course_id = data.get('course_id')
+    session_date = data.get('session_date')
+    session_time = data.get('session_time')
+
+    conn = get_db_connection()
+
+    try:
+        conn.execute('''
+            INSERT INTO sessions (student_id, tutor_id, course_id, scheduled_date, scheduled_time, status)
+            VALUES (?, ?, ?, ?, ?, 'scheduled')
+        ''', (session['user_id'], tutor_id, course_id, session_date, session_time))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'status': 'success', 'message': 'Session scheduled successfully!'})
+
+    except Exception as e:
+        conn.close()
+        return jsonify({'status': 'error', 'message': 'Failed to schedule session'})
+
+
+# Lesson management
+@app.route('/lesson/<int:lesson_id>/start')
+@login_required
+@role_required('student')
+def start_lesson(lesson_id):
+    conn = get_db_connection()
+
+    # Get lesson details
+    lesson = conn.execute('''
+        SELECT l.*, c.title as course_title, c.id as course_id
+        FROM lessons l
+        JOIN courses c ON l.course_id = c.id
+        WHERE l.id = ?
+    ''', (lesson_id,)).fetchone()
+
+    if not lesson:
+        flash('Lesson not found.', 'error')
+        return redirect(url_for('student_dashboard'))
+
+    # Check if student is enrolled in this course
+    enrollment = conn.execute('''
+        SELECT * FROM progress WHERE user_id = ? AND course_id = ?
+    ''', (session['user_id'], lesson['course_id'])).fetchone()
+
+    if not enrollment:
+        # Auto-enroll student in course if not already enrolled
+        conn.execute('''
+            INSERT OR IGNORE INTO progress (user_id, course_id, progress, updated_at)
+            VALUES (?, ?, 0, ?)
+        ''', (session['user_id'], lesson['course_id'], datetime.now()))
+        conn.commit()
+
+    conn.close()
+    return render_template('start_lesson.html', lesson=lesson)
+
+
+@app.route('/lesson/<int:lesson_id>/complete', methods=['POST'])
+@login_required
+@role_required('student')
+def complete_lesson(lesson_id):
+    conn = get_db_connection()
+
+    # Get lesson and course info
+    lesson = conn.execute('''
+        SELECT l.*, c.id as course_id
+        FROM lessons l
+        JOIN courses c ON l.course_id = c.id
+        WHERE l.id = ?
+    ''', (lesson_id,)).fetchone()
+
+    if not lesson:
+        flash('Lesson not found.', 'error')
+        return redirect(url_for('student_dashboard'))
+
+    # Get total lessons in this course
+    total_lessons = conn.execute('''
+        SELECT COUNT(*) as count FROM lessons WHERE course_id = ?
+    ''', (lesson['course_id'],)).fetchone()['count']
+
+    # Get current progress
+    current_progress = conn.execute('''
+        SELECT * FROM progress WHERE user_id = ? AND course_id = ?
+    ''', (session['user_id'], lesson['course_id'])).fetchone()
+
+    # Calculate new progress (each lesson completion adds percentage)
+    progress_per_lesson = 100 / total_lessons if total_lessons > 0 else 100
+    new_progress = min(100, (current_progress['progress'] if current_progress else 0) + progress_per_lesson)
+
+    # Update progress
+    conn.execute('''
+        INSERT OR REPLACE INTO progress (user_id, course_id, progress, updated_at)
+        VALUES (?, ?, ?, ?)
+    ''', (session['user_id'], lesson['course_id'], int(new_progress), datetime.now()))
+
+    conn.commit()
+    conn.close()
+
+    # Show appropriate success message
+    if new_progress >= 100:
+        flash(f'🎉 Congratulations! You completed "{lesson["title"]}" and finished the entire course!', 'success')
+    else:
+        flash(f'✅ Lesson "{lesson["title"]}" completed! Course progress: {int(new_progress)}%', 'success')
+
+    return redirect(url_for('course_view', course_id=lesson['course_id']))
+
+
+# Enhanced course view with lesson progress
 @app.route('/course/<int:course_id>')
 @login_required
 def course_view(course_id):
@@ -270,12 +459,18 @@ def course_view(course_id):
 
     # Get user progress if student
     progress = None
+    completed_lessons = []
     if session['user_role'] == 'student':
         progress = conn.execute('SELECT * FROM progress WHERE user_id = ? AND course_id = ?',
                                 (session['user_id'], course_id)).fetchone()
 
+        # For demo purposes, we'll track completed lessons in session
+        # In a real app, you'd have a separate table for lesson completions
+        completed_lessons = session.get(f'completed_lessons_{course_id}', [])
+
     conn.close()
-    return render_template('course_view.html', course=course, lessons=lessons, progress=progress)
+    return render_template('course_view.html', course=course, lessons=lessons,
+                           progress=progress, completed_lessons=completed_lessons)
 
 
 # Tutor availability management

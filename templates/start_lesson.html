@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }} - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Lesson Content -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">{{ lesson.title }}</h4>
+                            <small>{{ lesson.course_title }} - Lesson {{ lesson.lesson_order }}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-primary">
+                                <i class="fas fa-clock me-1"></i>{{ lesson.duration }} min
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Lesson Content -->
+                    <div class="lesson-content mb-4">
+                        <h5>Lesson Overview</h5>
+                        <p class="lead">{{ lesson.content }}</p>
+                        
+                        <!-- Simulated lesson content -->
+                        <div class="mt-4">
+                            <h6>Key Learning Points:</h6>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    Understand the core concepts
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    Practice with examples
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    Apply knowledge to exercises
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Learning Materials -->
+                        <div class="mt-4">
+                            <h6>Learning Materials:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card border-primary">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-video text-primary" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2">Video Tutorial</h6>
+                                            <p class="small text-muted">Watch the instructional video</p>
+                                            <button class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-play me-1"></i>Play Video
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-info">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-file-pdf text-info" style="font-size: 2rem;"></i>
+                                            <h6 class="mt-2">Reading Material</h6>
+                                            <p class="small text-muted">Download lesson notes</p>
+                                            <button class="btn btn-outline-info btn-sm">
+                                                <i class="fas fa-download me-1"></i>Download PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Practice Exercise -->
+                        <div class="mt-4">
+                            <h6>Practice Exercise:</h6>
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Try it yourself:</strong> Apply what you've learned in this interactive exercise.
+                                Complete the practice problems to reinforce your understanding.
+                            </div>
+                            <button class="btn btn-warning">
+                                <i class="fas fa-pencil-alt me-2"></i>Start Practice Exercise
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress Sidebar -->
+        <div class="col-md-4">
+            <!-- Lesson Progress -->
+            <div class="card dashboard-card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>Lesson Progress
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-warning" role="progressbar" 
+                             style="width: 0%" id="lessonProgress">
+                            0%
+                        </div>
+                    </div>
+                    <p class="text-muted small">Complete all sections to finish this lesson</p>
+                    
+                    <!-- Lesson Checklist -->
+                    <div class="mt-3">
+                        <h6>Lesson Checklist:</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="readContent" onchange="updateLessonProgress()">
+                            <label class="form-check-label" for="readContent">
+                                Read lesson content
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="watchVideo" onchange="updateLessonProgress()">
+                            <label class="form-check-label" for="watchVideo">
+                                Watch video tutorial
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="downloadMaterial" onchange="updateLessonProgress()">
+                            <label class="form-check-label" for="downloadMaterial">
+                                Download materials
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="completeExercise" onchange="updateLessonProgress()">
+                            <label class="form-check-label" for="completeExercise">
+                                Complete practice exercise
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lesson Actions -->
+            <div class="card dashboard-card">
+                <div class="card-header">
+                    <h6 class="mb-0">Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <form method="POST" action="{{ url_for('complete_lesson', lesson_id=lesson.id) }}" id="completeLessonForm">
+                            <button type="submit" class="btn btn-success w-100" id="completeLessonBtn" disabled>
+                                <i class="fas fa-check me-2"></i>Mark as Complete
+                            </button>
+                        </form>
+                        
+                        <a href="{{ url_for('course_view', course_id=lesson.course_id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Course
+                        </a>
+                        
+                        <button class="btn btn-outline-info" onclick="takeNotes()">
+                            <i class="fas fa-sticky-note me-2"></i>Take Notes
+                        </button>
+                        
+                        <button class="btn btn-outline-warning" onclick="askQuestion()">
+                            <i class="fas fa-question-circle me-2"></i>Ask Question
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateLessonProgress() {
+    const checkboxes = document.querySelectorAll('.form-check-input');
+    const checked = document.querySelectorAll('.form-check-input:checked').length;
+    const total = checkboxes.length;
+    const percentage = Math.round((checked / total) * 100);
+    
+    // Update progress bar
+    const progressBar = document.getElementById('lessonProgress');
+    progressBar.style.width = percentage + '%';
+    progressBar.textContent = percentage + '%';
+    
+    // Enable complete button when all tasks are done
+    const completeBtn = document.getElementById('completeLessonBtn');
+    if (percentage === 100) {
+        completeBtn.disabled = false;
+        completeBtn.classList.remove('btn-success');
+        completeBtn.classList.add('btn-warning');
+        completeBtn.innerHTML = '<i class="fas fa-trophy me-2"></i>Complete Lesson!';
+        
+        // Show completion message
+        showNotification(' Great job! You can now complete this lesson.', 'success');
+    } else {
+        completeBtn.disabled = true;
+        completeBtn.classList.remove('btn-warning');
+        completeBtn.classList.add('btn-success');
+        completeBtn.innerHTML = '<i class="fas fa-check me-2"></i>Mark as Complete';
+    }
+}
+
+function takeNotes() {
+    showNotification(' Notes feature would open here for students to write their thoughts.', 'info');
+}
+
+function askQuestion() {
+    showNotification(' Question feature would allow students to ask their tutor for help.', 'info');
+}
+
+// Auto-check first item when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        document.getElementById('readContent').checked = true;
+        updateLessonProgress();
+        showNotification('Welcome to the lesson! Complete all tasks to finish.', 'info');
+    }, 1000);
+});
+</script>
+{% endblock %}

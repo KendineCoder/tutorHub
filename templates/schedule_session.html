@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Session - Learning Hub{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card dashboard-card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-calendar-plus me-2"></i>Schedule New Tutoring Session</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tutor_id" class="form-label">
+                                        <i class="fas fa-chalkboard-teacher me-2"></i>Select Tutor
+                                    </label>
+                                    <select class="form-select" id="tutor_id" name="tutor_id" required>
+                                        <option value="">Choose a tutor...</option>
+                                        {% for tutor in tutors %}
+                                        <option value="{{ tutor.id }}">{{ tutor.username }} ({{ tutor.email }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Select an available tutor for your session</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="course_id" class="form-label">
+                                        <i class="fas fa-book me-2"></i>Subject (Optional)
+                                    </label>
+                                    <select class="form-select" id="course_id" name="course_id">
+                                        <option value="">General tutoring session</option>
+                                        {% for course in courses %}
+                                        <option value="{{ course.id }}">{{ course.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Choose a specific course or leave blank for general help</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="session_date" class="form-label">
+                                        <i class="fas fa-calendar me-2"></i>Session Date
+                                    </label>
+                                    <input type="date" class="form-control" id="session_date" name="session_date" required>
+                                    <div class="form-text">Select a date for your tutoring session</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="session_time" class="form-label">
+                                        <i class="fas fa-clock me-2"></i>Session Time
+                                    </label>
+                                    <select class="form-select" id="session_time" name="session_time" required>
+                                        <option value="">Choose time...</option>
+                                        <option value="09:00">9:00 AM</option>
+                                        <option value="10:00">10:00 AM</option>
+                                        <option value="11:00">11:00 AM</option>
+                                        <option value="12:00">12:00 PM</option>
+                                        <option value="13:00">1:00 PM</option>
+                                        <option value="14:00">2:00 PM</option>
+                                        <option value="15:00">3:00 PM</option>
+                                        <option value="16:00">4:00 PM</option>
+                                        <option value="17:00">5:00 PM</option>
+                                        <option value="18:00">6:00 PM</option>
+                                        <option value="19:00">7:00 PM</option>
+                                        <option value="20:00">8:00 PM</option>
+                                    </select>
+                                    <div class="form-text">Choose a convenient time slot</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="notes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>Session Notes (Optional)
+                            </label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                     placeholder="What would you like to focus on? Any specific topics or questions?"></textarea>
+                            <div class="form-text">Help your tutor prepare by sharing what you'd like to work on</div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Session Details:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Sessions are typically 60 minutes long</li>
+                                <li>You can reschedule up to 24 hours before the session</li>
+                                <li>Your tutor will receive your session notes in advance</li>
+                                <li>You'll receive a confirmation email with meeting details</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-calendar-check me-2"></i>Schedule Session
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Available Tutors Info -->
+            <div class="card dashboard-card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Available Tutors
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for tutor in tutors %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-primary">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <i class="fas fa-user-circle text-primary" style="font-size: 2rem;"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1">{{ tutor.username }}</h6>
+                                            <small class="text-muted">{{ tutor.email }}</small>
+                                            <br>
+                                            <span class="badge bg-success">Available</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-star text-warning"></i>
+                                            <i class="fas fa-star text-warning"></i>
+                                            <i class="fas fa-star text-warning"></i>
+                                            <i class="fas fa-star text-warning"></i>
+                                            <i class="fas fa-star text-warning"></i>
+                                            4.9 (15 reviews)
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set minimum date to tomorrow
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('session_date');
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const minDate = tomorrow.toISOString().split('T')[0];
+    dateInput.min = minDate;
+    
+    // Auto-select first available tutor if only one
+    const tutorSelect = document.getElementById('tutor_id');
+    if (tutorSelect.options.length === 2) { // Only "Choose a tutor..." and one tutor
+        tutorSelect.selectedIndex = 1;
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const tutorId = document.getElementById('tutor_id').value;
+    const sessionDate = document.getElementById('session_date').value;
+    const sessionTime = document.getElementById('session_time').value;
+    
+    if (!tutorId || !sessionDate || !sessionTime) {
+        e.preventDefault();
+        showNotification('Please fill in all required fields.', 'warning');
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scheduling...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}
