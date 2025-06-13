@@ -1,0 +1,691 @@
+{% extends "base.html" %} 
+{% block title %}My Courses - Tutor Portal{% endblock %} 
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar Navigation -->
+    <div class="col-md-2">
+      <div class="sidebar p-3">
+        <h5 class="mb-4">
+          <i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal
+        </h5>
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.dashboard') }}">
+              <i class="fas fa-tachometer-alt me-2"></i>Overview
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link active"
+              href="{{ url_for('tutor.my_courses') }}"
+            >
+              <i class="fas fa-book me-2"></i>My Courses
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.my_students') }}">
+              <i class="fas fa-users me-2"></i>My Students
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.sessions') }}">
+              <i class="fas fa-calendar me-2"></i>Sessions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.availability') }}">
+              <i class="fas fa-clock me-2"></i>Availability
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-10">
+      <div class="main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>My Courses</h2>
+          <div class="text-muted">
+            <i class="fas fa-book me-2"></i>{{ courses|length }} Course{{ 's' if courses|length != 1 else '' }}
+          </div>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text"
+                ><i class="fas fa-search"></i
+              ></span>
+              <input
+                type="text"
+                class="form-control"
+                id="courseSearch"
+                placeholder="Search courses..."
+              />
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" id="difficultyFilter">
+              <option value="">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" id="sortBy">
+              <option value="recent">Most Recent</option>
+              <option value="students">Most Students</option>
+              <option value="sessions">Most Sessions</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Courses Grid -->
+        <div class="row" id="coursesContainer">
+          {% for course in courses %}          <div
+            class="col-md-6 col-lg-4 mb-4 course-item"
+            data-difficulty="{{ course.difficulty_level }}"
+            data-students="{{ course.students_taught }}"
+            data-sessions="{{ course.total_sessions }}"
+            data-rating="{{ course.avg_rating or 0 }}"
+            data-course-id="{{ course.id }}"
+          >
+            <div class="card dashboard-card h-100">              <div
+                class="card-header d-flex justify-content-between align-items-center"
+              >
+                <h6 class="mb-0 card-title">{{ course.title }}</h6>
+                <div class="dropdown">
+                  <button
+                    class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                  >
+                    <i class="fas fa-ellipsis-v"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li>
+                      <a
+                        class="dropdown-item"
+                        href="{{ url_for('content.course_view', course_id=course.id) }}"
+                      >
+                        <i class="fas fa-eye me-2"></i>View Course
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        class="dropdown-item"
+                        href="#"
+                        onclick="viewStudentsInCourse({{ course.id }})"
+                      >
+                        <i class="fas fa-users me-2"></i>View Students
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        class="dropdown-item"
+                        href="#"
+                        onclick="scheduleCourseSession({{ course.id }})"
+                      >
+                        <i class="fas fa-calendar-plus me-2"></i>Schedule Session
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <a
+                        class="dropdown-item"
+                        href="#"
+                        onclick="viewCourseAnalytics({{ course.id }})"
+                      >
+                        <i class="fas fa-chart-bar me-2"></i>View Analytics
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="card-text text-muted small mb-3">
+                  {{ course.description[:100] if course.description else 'No description available' }}{% if course.description and course.description|length > 100 %}...{% endif %}
+                </p>
+
+                <!-- Course Stats -->
+                <div class="row text-center mb-3">
+                  <div class="col-4">
+                    <small class="text-muted d-block">Students</small>
+                    <strong>{{ course.students_taught }}</strong>
+                  </div>
+                  <div class="col-4">
+                    <small class="text-muted d-block">Sessions</small>
+                    <strong>{{ course.total_sessions }}</strong>
+                  </div>
+                  <div class="col-4">
+                    <small class="text-muted d-block">Lessons</small>
+                    <strong>{{ course.total_lessons }}</strong>
+                  </div>
+                </div>
+
+                <!-- Session Statistics -->
+                <div class="row text-center mb-3">
+                  <div class="col-6">
+                    <small class="text-muted d-block">Completed</small>
+                    <strong class="text-success">{{ course.completed_sessions }}</strong>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted d-block">Upcoming</small>
+                    <strong class="text-primary">{{ course.upcoming_sessions }}</strong>
+                  </div>
+                </div>
+
+                <!-- Rating -->
+                {% if course.avg_rating %}
+                <div class="mb-3 text-center">
+                  <small class="text-muted d-block">Average Rating</small>
+                  <div class="rating-display">
+                    {% for i in range(1, 6) %}
+                      {% if i <= course.avg_rating %}
+                        <i class="fas fa-star text-warning"></i>
+                      {% elif i - 0.5 <= course.avg_rating %}
+                        <i class="fas fa-star-half-alt text-warning"></i>
+                      {% else %}
+                        <i class="far fa-star text-warning"></i>
+                      {% endif %}
+                    {% endfor %}
+                    <span class="ms-1"><strong>{{ course.avg_rating }}</strong></span>
+                  </div>
+                </div>
+                {% endif %}
+
+                <!-- Difficulty and Duration -->
+                <div class="mb-3">
+                  <span
+                    class="badge bg-{{ 'success' if course.difficulty_level == 'beginner' 
+                                       else 'warning' if course.difficulty_level == 'intermediate'
+                                       else 'danger' if course.difficulty_level == 'advanced'
+                                       else 'secondary' }}"
+                  >
+                    {{ course.difficulty_level.title() if course.difficulty_level else 'Unknown' }}
+                  </span>
+                  {% if course.estimated_duration %}
+                  <span class="badge bg-outline-info ms-1"
+                    >{{ course.estimated_duration }}h</span
+                  >
+                  {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                  <a
+                    href="{{ url_for('content.course_view', course_id=course.id) }}"
+                    class="btn btn-primary btn-sm"
+                  >
+                    <i class="fas fa-eye me-2"></i>View Course Content
+                  </a>
+                </div>
+              </div>
+              <div class="card-footer bg-transparent">
+                <small class="text-muted">
+                  <i class="fas fa-calendar me-1"></i>
+                  {% if course.last_session_date %}
+                    Last session: {{ course.last_session_date }}
+                  {% else %}
+                    No sessions yet
+                  {% endif %}
+                </small>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if not courses %}
+        <div class="text-center py-5">
+          <i class="fas fa-chalkboard fa-4x text-muted mb-4"></i>
+          <h4 class="text-muted">No courses assigned yet</h4>
+          <p class="text-muted mb-4">
+            You haven't taught any courses yet. Start by getting assigned to sessions!
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Students in Course Modal -->
+<div class="modal fade" id="studentsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="studentsModalTitle">Students in Course</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="studentsContainer">
+          <!-- Students will be loaded here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Course Analytics Modal -->
+<div class="modal fade" id="analyticsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Course Analytics</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="analyticsContainer">
+          <!-- Analytics will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Define functions in global scope so they can be called from onclick handlers  function viewStudentsInCourse(courseId) {
+    alert('Button clicked! Course ID: ' + courseId);
+    console.log('viewStudentsInCourse called with courseId:', courseId);
+    
+    // Get course title from the page
+    const courseCard = document.querySelector(`[data-course-id="${courseId}"]`);
+    const courseTitle = courseCard ? courseCard.querySelector('.card-title').textContent.trim() : 'Course';
+    
+    console.log('Found course card:', courseCard, 'Course title:', courseTitle);
+    
+    // Load students for the selected course
+    fetch(`/tutor/api/courses/${courseId}/students`)
+      .then((response) => {
+        console.log('Response status:', response.status);
+        return response.json();
+      })
+      .then((data) => {
+        console.log('Response data:', data);
+        if (data.status === 'success') {
+          displayStudentsModal(data.students, courseId, courseTitle);
+        } else {
+          showNotification(data.error || 'Failed to load students', 'error');
+        }
+      })
+      .catch((error) => {
+        console.error('Error loading students:', error);
+        showNotification('An error occurred while loading students', 'error');
+      });
+  }
+
+  function displayStudentsModal(students, courseId, courseTitle = 'Course') {
+    console.log('displayStudentsModal called with:', students, courseId, courseTitle);
+    
+    // Set modal title
+    const modalTitle = document.querySelector('#studentsModal .modal-title');
+    if (modalTitle) {
+      modalTitle.textContent = `Students in ${courseTitle}`;
+    }
+    
+    const container = document.getElementById("studentsContainer");
+    
+    if (students && students.length > 0) {
+      container.innerHTML = `
+        <div class="mb-3">
+          <h6 class="text-muted">${students.length} Student${students.length !== 1 ? 's' : ''} Enrolled</h6>
+        </div>
+        ${students.map(student => `
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h6 class="card-title mb-1">${student.username}</h6>
+                  <p class="text-muted small mb-2">${student.email}</p>
+                  
+                  <!-- Progress Bar -->
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <small class="text-muted">Course Progress</small>
+                      <small class="text-muted">${student.progress}%</small>
+                    </div>
+                    <div class="progress" style="height: 6px">
+                      <div class="progress-bar ${student.progress >= 80 ? 'bg-success' : student.progress >= 50 ? 'bg-primary' : 'bg-warning'}" 
+                           style="width: ${student.progress}%" 
+                           aria-valuenow="${student.progress}" 
+                           aria-valuemin="0" 
+                           aria-valuemax="100">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Stats -->
+                  <div class="row text-center">
+                    <div class="col-3">
+                      <small class="text-muted d-block">Sessions</small>
+                      <strong>${student.total_sessions}</strong>
+                    </div>
+                    <div class="col-3">
+                      <small class="text-muted d-block">Completed</small>
+                      <strong class="text-success">${student.completed_sessions}</strong>
+                    </div>
+                    <div class="col-3">
+                      <small class="text-muted d-block">Upcoming</small>
+                      <strong class="text-primary">${student.upcoming_sessions}</strong>
+                    </div>
+                    <div class="col-3">
+                      <small class="text-muted d-block">Lessons</small>
+                      <strong>${student.completed_lessons}/${student.total_lessons}</strong>
+                    </div>
+                  </div>
+
+                  ${student.avg_rating ? `
+                    <div class="mt-2">
+                      <small class="text-muted">Average Rating: </small>
+                      <span class="text-warning">
+                        ${'★'.repeat(Math.floor(student.avg_rating))}${'☆'.repeat(5 - Math.floor(student.avg_rating))}
+                      </span>
+                      <small class="text-muted">(${student.avg_rating})</small>
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="col-md-4 text-end">
+                  <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="viewStudentProgress(${student.id})">
+                      <i class="fas fa-chart-line me-1"></i>View Progress
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="scheduleStudentSession(${student.id}, ${courseId})">
+                      <i class="fas fa-calendar-plus me-1"></i>Schedule Session
+                    </button>
+                  </div>
+                  <div class="mt-2">
+                    <small class="text-muted">
+                      <i class="fas fa-calendar me-1"></i>
+                      Enrolled: ${new Date(student.enrolled_date).toLocaleDateString()}
+                    </small>
+                    ${student.last_session_date ? `
+                      <br><small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Last session: ${student.last_session_date}
+                      </small>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    } else {
+      container.innerHTML = `
+        <div class="text-center py-4">
+          <i class="fas fa-users fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">No students found</h5>
+          <p class="text-muted">No students are currently enrolled in this course or you haven't taught any sessions yet.</p>
+        </div>
+      `;
+    }
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('studentsModal'));
+    modal.show();
+  }
+
+  function viewStudentProgress(studentId) {
+    // Redirect to student progress page
+    window.location.href = `/tutor/api/student-progress/${studentId}`;
+  }
+
+  function scheduleStudentSession(studentId, courseId) {
+    // Redirect to sessions page with student and course pre-selected
+    window.location.href = `/tutor/sessions?student=${studentId}&course=${courseId}`;
+  }
+
+  function scheduleCourseSession(courseId) {
+    // Redirect to sessions page with course pre-selected
+    window.location.href = `/tutor/sessions?course=${courseId}`;
+  }
+
+  function viewCourseAnalytics(courseId) {
+    // TODO: Implement course analytics functionality
+    console.log("View course analytics:", courseId);
+    showNotification("Analytics feature coming soon!", "info");
+  }
+
+  // Helper function for showing notifications
+  function showNotification(message, type = 'info') {
+    console.log('showNotification called:', message, type);
+    
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Search functionality
+    const searchInput = document.getElementById("courseSearch");
+    const difficultyFilter = document.getElementById("difficultyFilter");
+    const sortBy = document.getElementById("sortBy");
+
+    function filterAndSortCourses() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const difficultyValue = difficultyFilter.value;
+      const sortValue = sortBy.value;
+      
+      const courseItems = Array.from(document.querySelectorAll(".course-item"));
+
+      // Filter courses
+      courseItems.forEach((item) => {
+        const title = item
+          .querySelector(".card-title")
+          .textContent.toLowerCase();
+        const difficulty = item.dataset.difficulty;
+
+        let showItem = true;
+
+        // Search filter
+        if (searchTerm && !title.includes(searchTerm)) {
+          showItem = false;
+        }
+
+        // Difficulty filter
+        if (difficultyValue && difficulty !== difficultyValue) {
+          showItem = false;
+        }
+
+        item.style.display = showItem ? "block" : "none";
+      });
+
+      // Sort visible courses
+      const visibleCourses = courseItems.filter(
+        (item) => item.style.display !== "none"
+      );
+      
+      visibleCourses.sort((a, b) => {
+        switch (sortValue) {
+          case "students":
+            return parseInt(b.dataset.students) - parseInt(a.dataset.students);
+          case "sessions":
+            return parseInt(b.dataset.sessions) - parseInt(a.dataset.sessions);
+          case "rating":
+            return parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating);
+          case "recent":
+          default:
+            // Default sort by most recent (already ordered by backend)
+            return 0;
+        }
+      });
+
+      // Reorder DOM elements
+      const container = document.getElementById("coursesContainer");
+      visibleCourses.forEach((item) => {
+        container.appendChild(item);
+      });
+    }    searchInput.addEventListener("input", filterAndSortCourses);
+    difficultyFilter.addEventListener("change", filterAndSortCourses);
+    sortBy.addEventListener("change", filterAndSortCourses);
+  });
+  function viewStudentsInCourse(courseId) {
+    // Get course title from the page
+    const courseCard = document.querySelector(`[data-course-id="${courseId}"]`);
+    const courseTitle = courseCard ? courseCard.querySelector('.card-title').textContent.trim() : 'Course';
+    
+    // Load students for the selected course
+    fetch(`/tutor/api/courses/${courseId}/students`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === 'success') {
+          displayStudentsModal(data.students, courseId, courseTitle);
+        } else {
+          showNotification(data.error || 'Failed to load students', 'error');
+        }
+      })
+      .catch((error) => {
+        console.error('Error loading students:', error);
+        showNotification('An error occurred while loading students', 'error');
+      });
+  }
+
+  function displayStudentsModal(students, courseId, courseTitle = 'Course') {
+    // Set modal title
+    document.querySelector('#studentsModal .modal-title').textContent = `Students in ${courseTitle}`;
+    
+    const container = document.getElementById("studentsContainer");
+    
+    if (students && students.length > 0) {
+      container.innerHTML = `
+        <div class="mb-3">
+          <h6 class="text-muted">${students.length} Student${students.length !== 1 ? 's' : ''} Enrolled</h6>
+        </div>
+        ${students.map(student => `
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h6 class="card-title mb-1">${student.username}</h6>
+                  <p class="text-muted small mb-2">${student.email}</p>
+                  
+                  <!-- Progress Bar -->
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <small class="text-muted">Course Progress</small>
+                      <small class="text-muted">${student.avg_progress || 0}%</small>
+                    </div>
+                    <div class="progress" style="height: 6px">
+                      <div
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: ${student.avg_progress || 0}%"
+                        aria-valuenow="${student.avg_progress || 0}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <!-- Student Stats -->
+                  <div class="row text-center">
+                    <div class="col-4">
+                      <small class="text-muted d-block">Sessions</small>
+                      <strong>${student.total_sessions || 0}</strong>
+                    </div>
+                    <div class="col-4">
+                      <small class="text-muted d-block">Completed</small>
+                      <strong class="text-success">${student.completed_sessions || 0}</strong>
+                    </div>
+                    <div class="col-4">
+                      <small class="text-muted d-block">Rating</small>
+                      <strong class="text-warning">${student.avg_rating ? student.avg_rating.toFixed(1) : 'N/A'}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4 text-end">
+                  <button class="btn btn-outline-primary btn-sm mb-2" onclick="viewStudentProgress(${student.id})">
+                    <i class="fas fa-chart-line me-1"></i>View Progress
+                  </button>
+                  <button class="btn btn-outline-success btn-sm" onclick="scheduleSessionWithStudent(${student.id}, ${courseId})">
+                    <i class="fas fa-calendar-plus me-1"></i>Schedule Session
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    } else {
+      container.innerHTML = '<p class="text-center text-muted">No students enrolled in this course yet.</p>';
+    }
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('studentsModal'));
+    modal.show();
+  }
+
+  function viewStudentProgress(studentId) {
+    // TODO: Implement student progress view
+    showNotification("Student progress view coming soon!", "info");
+  }
+  function scheduleSessionWithStudent(studentId, courseId) {
+    // Redirect to sessions page with student and course pre-selected
+    window.location.href = `/tutor/sessions?student=${studentId}&course=${courseId}`;
+  }
+
+  function scheduleCourseSession(courseId) {
+    // Redirect to sessions page with course pre-selected
+    window.location.href = `/tutor/sessions?course=${courseId}`;
+  }
+
+  function viewCourseAnalytics(courseId) {
+    // TODO: Implement course analytics functionality
+    console.log("View course analytics:", courseId);
+    showNotification("Analytics feature coming soon!", "info");
+  }
+
+  // Helper function for showing notifications
+  function showNotification(message, type = 'info') {
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 5000);
+  }
+</script>
+{% endblock %}

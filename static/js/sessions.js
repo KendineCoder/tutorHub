@@ -18,19 +18,19 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         console.error('Schedule modal element not found!');
     }
-    
+
     // Add click handler for schedule button
     const scheduleBtn = document.getElementById('scheduleNewSessionBtn');
     if (scheduleBtn) {
-        scheduleBtn.addEventListener('click', function() {
+        scheduleBtn.addEventListener('click', function () {
             openScheduleModal();
         });
     }
-    
+
     // Initialize other elements
     initializeDatePicker();
     initializeEventListeners();
-    
+
     // Check if course select is empty
     const courseSelect = document.getElementById('courseSelect');
     if (courseSelect && courseSelect.options.length <= 1) {
@@ -83,7 +83,7 @@ function initializeEventListeners() {
 function loadInitialData() {
     // Initialize modal for later use
     scheduleModal = new bootstrap.Modal(document.getElementById('scheduleModal'));
-    
+
     // We should not call loadTutorsForCourse here as no course is selected yet
     // The function will be called when a course is selected
 }
@@ -107,33 +107,33 @@ function openScheduleModal(tutorId = null, courseId = null) {
     const form = document.getElementById('scheduleForm');
     form.reset();
     clearAvailabilityPreview();
-    
+
     selectedTutorId = null;
     selectedDate = null;
-    
+
     // Set today as minimum date for date picker
     const dateInput = document.getElementById('sessionDate');
     const today = new Date().toISOString().split('T')[0];
     dateInput.min = today;
-    
+
     // Set 60 days from now as maximum date
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 60);
     dateInput.max = maxDate.toISOString().split('T')[0];
-    
+
     // Ensure dropdown is ready
     const courseSelect = document.getElementById('courseSelect');
-    
+
     if (courseSelect.options.length <= 1) {
         console.log("No enrolled courses found!");
     }
-    
+
     // Pre-fill if parameters provided
     if (courseId) {
         document.getElementById('courseSelect').value = courseId;
         loadTutorsForCourse();
     }
-    
+
     if (tutorId) {
         setTimeout(() => {
             document.getElementById('tutorSelect').value = tutorId;
@@ -155,12 +155,12 @@ function loadTutorsForCourse() {
 
     // Reset tutor selection when course changes
     selectedTutorId = null;
-    
+
     // If no enrolled courses, show a clear message
     if (courseSelect.options.length <= 1) {
         tutorSelect.innerHTML = '<option value="">No enrolled courses available</option>';
         tutorSelect.disabled = true;
-        
+
         // Show a warning message in the form
         const courseSelectParent = courseSelect.parentElement;
         if (courseSelectParent) {
@@ -173,7 +173,7 @@ function loadTutorsForCourse() {
         }
         return;
     }
-    
+
     if (!courseId) {
         tutorSelect.innerHTML = '<option value="">Select a course first</option>';
         tutorSelect.disabled = true;
@@ -206,25 +206,25 @@ function loadTutorsForCourse() {
             tutorSelect.innerHTML = '<option value="">Error loading tutors</option>';
             tutorSelect.disabled = true;
         });
-      // Helper function to populate tutors
+    // Helper function to populate tutors
     function populateTutors(tutors) {
         tutorSelect.innerHTML = '<option value="">Select a tutor</option>';
         tutors.forEach(tutor => {
             const option = document.createElement('option');
             option.value = tutor.id;
-            
+
             // Display only tutor name and stars
             let tutorInfo = tutor.username;
-            
+
             // Add rating if available
             if (tutor.avg_rating) {
-                const stars = '★'.repeat(Math.round(tutor.avg_rating)) + 
-                              '☆'.repeat(5 - Math.round(tutor.avg_rating));
+                const stars = '★'.repeat(Math.round(tutor.avg_rating)) +
+                    '☆'.repeat(5 - Math.round(tutor.avg_rating));
                 tutorInfo += ` (${stars})`;
             }
-            
+
             // Subject expertise info has been removed as requested
-            
+
             option.textContent = tutorInfo;
             option.dataset.rating = tutor.avg_rating || '0';
             tutorSelect.appendChild(option);
@@ -239,7 +239,7 @@ function loadTutorsForCourse() {
 function onTutorSelected() {
     const tutorSelect = document.getElementById('tutorSelect');
     selectedTutorId = tutorSelect.value;
-    
+
     console.log("Tutor selected:", selectedTutorId);
 
     if (selectedTutorId) {
@@ -263,7 +263,7 @@ function onTutorSelected() {
 function onDateSelected() {
     const dateInput = document.getElementById('sessionDate');
     selectedDate = dateInput.value;
-    
+
     console.log("Date selected:", selectedDate);
 
     if (selectedDate) {
@@ -293,7 +293,7 @@ function loadAvailableSlots() {
     // Show loading
     slotsSelect.innerHTML = '<option value="">Loading available slots...</option>';
     slotsSelect.disabled = true;
-    
+
     // Default time slots in case the API fails
     const defaultSlots = [
         '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -425,7 +425,7 @@ function submitScheduleForm() {
     const timeSelect = document.getElementById('availableSlots');
     const durationSelect = document.getElementById('sessionDuration');
     const notesInput = document.getElementById('sessionNotes');
-    
+
     // Create data object
     const formData = {
         courseId: courseSelect.value,
@@ -435,23 +435,23 @@ function submitScheduleForm() {
         duration: durationSelect.value,
         notes: notesInput.value
     };
-    
+
     console.log("Form data:", formData);
-    
+
     // Validate required fields manually
     if (!formData.courseId || !formData.tutorId || !formData.date || !formData.time) {
         console.log("Missing required fields");
-        
+
         // Highlight missing fields
         if (!formData.courseId) courseSelect.classList.add('is-invalid');
         if (!formData.tutorId) tutorSelect.classList.add('is-invalid');
         if (!formData.date) dateInput.classList.add('is-invalid');
         if (!formData.time) timeSelect.classList.add('is-invalid');
-        
+
         alert('Please fill in all required fields');
         return;
     }
-    
+
     // Clear any previous validation styling
     courseSelect.classList.remove('is-invalid');
     tutorSelect.classList.remove('is-invalid');

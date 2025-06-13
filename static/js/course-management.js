@@ -1,6 +1,7 @@
 // Course Management JavaScript Module
 
-class CourseManager {    constructor() {
+class CourseManager {
+    constructor() {
         this.baseUrl = '/content/api';
         this.initializeEventListeners();
     }
@@ -18,19 +19,19 @@ class CourseManager {    constructor() {
                 this.deleteCourse(courseId);
             }
         });
-    }    async editCourse(courseId) {
+    } async editCourse(courseId) {
         try {
             // Fetch current course data
             console.log(`Fetching course data from: ${this.baseUrl}/courses/${courseId}`);
             const response = await fetch(`${this.baseUrl}/courses/${courseId}`);
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || `Server returned ${response.status}: ${response.statusText}`);
             }
-            
+
             const course = await response.json();
-            
+
             // Open edit modal with current data
             this.openEditModal(course);
 
@@ -38,7 +39,7 @@ class CourseManager {    constructor() {
             console.error('Error editing course:', error);
             showNotification('Failed to load course data: ' + error.message, 'error');
         }
-    }    async deleteCourse(courseId) {
+    } async deleteCourse(courseId) {
         const confirmed = await this.showConfirmDialog(
             'Delete Course',
             'Are you sure you want to delete this course? This action cannot be undone.'
@@ -63,7 +64,7 @@ class CourseManager {    constructor() {
 
             const result = await response.json();
             showNotification('Course deleted successfully!', 'success');
-            
+
             // Remove course row from table
             const courseRow = document.querySelector(`[data-course-id="${courseId}"]`).closest('tr');
             if (courseRow) {
@@ -146,7 +147,7 @@ class CourseManager {    constructor() {
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('editCourseModal'));
         modal.show();
-    }    async updateCourse() {
+    } async updateCourse() {
         const courseId = document.getElementById('editCourseId').value;
         const data = {
             title: document.getElementById('editCourseTitle').value,
@@ -231,9 +232,9 @@ class CourseManager {    constructor() {
 document.addEventListener('DOMContentLoaded', function () {
     // Ensure showNotification function exists (fallback if it doesn't)
     if (typeof showNotification !== 'function') {
-        window.showNotification = function(message, type = 'info') {
+        window.showNotification = function (message, type = 'info') {
             console.log(`Notification (${type}):`, message);
-            
+
             // Create a simple alert for notifications
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
@@ -242,10 +243,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div>${message}</div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
-            
+
             // Insert at top of page
             document.body.insertBefore(alertDiv, document.body.firstChild);
-            
+
             // Remove after 5 seconds
             setTimeout(() => {
                 alertDiv.classList.remove('show');
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Add global error handler to catch any unhandled errors
-window.addEventListener('error', function(event) {
+window.addEventListener('error', function (event) {
     console.error('Global error:', event.error);
     showNotification('An error occurred: ' + (event.error?.message || 'Unknown error'), 'error');
 });

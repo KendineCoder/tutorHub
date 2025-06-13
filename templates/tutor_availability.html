@@ -8,16 +8,22 @@ endblock %} {% block content %}
         <h5 class="mb-4">
           <i class="fas fa-chalkboard-teacher me-2"></i>Tutor Portal
         </h5>
-        <ul class="nav nav-pills flex-column">
-          <li class="nav-item">
+        <ul class="nav nav-pills flex-column">          <li class="nav-item">
             <a class="nav-link" href="{{ url_for('tutor.dashboard') }}">
               <i class="fas fa-tachometer-alt me-2"></i>Overview
             </a>
-          </li>          <li class="nav-item">
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('tutor.my_courses') }}">
+              <i class="fas fa-book me-2"></i>My Courses
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="{{ url_for('tutor.my_students') }}">
               <i class="fas fa-users me-2"></i>My Students
             </a>
-          </li>          <li class="nav-item">
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="{{ url_for('tutor.sessions') }}">
               <i class="fas fa-calendar me-2"></i>Sessions
             </a>
